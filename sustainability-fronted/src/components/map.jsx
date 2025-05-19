@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import * as turf from '@turf/turf';
 
 function MapComponent() {
     useEffect(() => {
@@ -11,7 +12,7 @@ function MapComponent() {
             scrollWheelZoom: true,
         });
 
-        // Light mode tile layer from CartoDB Positron
+        // Light mode 
         L.tileLayer(
             'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
             {
@@ -21,9 +22,22 @@ function MapComponent() {
             }
         ).addTo(map);
 
-        L.marker([51.505, -0.09]).addTo(map)
-            .bindPopup('A sample marker!')
-            .openPopup();
+        fetch('/data.json')
+            .then((response) => response.json())
+            .then((geojson) => {
+                const geoJsonLayer = L.geoJSON(geojson, {
+                    style: {
+                        color: 'blue',
+                        weight: 4,
+                        opacity: 0.7,
+                    },
+                }).addTo(map);
+
+                map.fitBounds(geoJsonLayer.getBounds());
+            })
+            .catch((err) => {
+                console.error('Failed to load GeoJSON:', err);
+            });
 
         return () => map.remove();
     }, []);
@@ -36,7 +50,7 @@ function MapComponent() {
                 alignItems: 'center',
                 height: '100vh',
                 width: '100vw',
-                backgroundColor: '#ffffff', // white background for the page
+                backgroundColor: '#ffffff',
             }}
         >
             <div
