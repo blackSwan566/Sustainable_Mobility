@@ -1,5 +1,7 @@
 import React from 'react';
 import './App.css';
+import MapComponent from './components/map';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
   const handleBaumPflanzen = () => {
@@ -15,12 +17,28 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <h1 className="headline">KemptAInability</h1>
-      <div className="button-group">
-        <button onClick={handleBaumPflanzen}>Baum pflanzen</button>
-        <button onClick={handleSpurBlockieren}>Eine Spur blockieren</button>
-        <button onClick={handleAmpelUmschalten}>Ampel umschalten</button>
+    <div
+      style={{
+        height: '100vh',
+        width: '85vw',        // Kein Leerzeichen zwischen Zahl und Einheit
+        background: '#ffffff',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+      }}
+    >
+      <div>
+        <MapComponent />
+      </div>
+
+      <div className="app-container">
+        <h1 className="headline">KemptAInability</h1>
+        <div className="button-group">
+          <button onClick={handleBaumPflanzen}>Baum pflanzen</button>
+          <button onClick={handleSpurBlockieren}>Eine Spur blockieren</button>
+          <button onClick={handleAmpelUmschalten}>Ampel umschalten</button>
+        </div>
       </div>
     </div>
   );
