@@ -109,24 +109,24 @@ speed_colors = {
 # -------------------
 # GET TRAFFIC DATA FOR ALL ROUTES
 # -------------------
-geojson_forward = get_traffic_geojson(origin1, destination1, waypoints)
+geojson_route1 = get_traffic_geojson(origin1, destination1, waypoints)
 geojson_route2 = get_traffic_geojson(origin2, destination2)
 geojson_route3 = get_traffic_geojson(origin3, destination3, waypoints_route3)
 
 # -------------------
 # EXPORT GEOJSON DATA
 # -------------------
-if geojson_forward:
-    with open('traffic_route_forward_with_stops.geojson', 'w', encoding='utf-8') as f:
-        json.dump(geojson_forward, f, ensure_ascii=False, indent=2)
-    print("✔️ GeoJSON (forward with stops) exportiert: traffic_route_1.geojson")
+if geojson_route1:
+    with open('output/traffic_route_1.geojson', 'w', encoding='utf-8') as f:
+        json.dump(geojson_route1, f, ensure_ascii=False, indent=2)
+    print("✔️ GeoJSON (route 1) exportiert: traffic_route_1.geojson")
 
 if geojson_route2:
-    with open('traffic_route_2.geojson', 'w', encoding='utf-8') as f:
+    with open('output/traffic_route_2.geojson', 'w', encoding='utf-8') as f:
         json.dump(geojson_route2, f, ensure_ascii=False, indent=2)
     print("✔️ GeoJSON (route 2) exportiert: traffic_route_2.geojson")
 
 if geojson_route3:
-    with open('traffic_route_3.geojson', 'w', encoding='utf-8') as f:
+    with open('output/traffic_route_3.geojson', 'w', encoding='utf-8') as f:
         json.dump(geojson_route3, f, ensure_ascii=False, indent=2)
     print("✔️ GeoJSON (route 3) exportiert: traffic_route_3.geojson")
