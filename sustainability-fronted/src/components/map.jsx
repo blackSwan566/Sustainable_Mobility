@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import osmtogeojson from 'osmtogeojson';
+import * as turf from '@turf/turf'; // Für Geometrie-Prüfung
+
 
 const treeIcon = L.icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/427/427735.png',
+  iconUrl: 'https://symbl-cdn.com/i/webp/58/20ee459c4c89d508400f762cf79392.webp',
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });
@@ -11,6 +14,17 @@ const treeIcon = L.icon({
 function MapComponent({ activeButton }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const activeButtonRef = useRef(activeButton); // <- Ref für aktuellen Button
+
+  // Speichere den aktuellen Button-Wert immer aktuell ab
+  useEffect(() => {
+    activeButtonRef.current = activeButton;
+
+    if (activeButton === 'delete') {
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
+    }
+  }, [activeButton]);
 
   useEffect(() => {
     const map = L.map('map', {
@@ -18,6 +32,7 @@ function MapComponent({ activeButton }) {
       zoom: 13,
       scrollWheelZoom: true,
     });
+    
     mapRef.current = map;
 
     L.tileLayer(
@@ -29,13 +44,14 @@ function MapComponent({ activeButton }) {
       }
     ).addTo(map);
 
-    L.marker([51.505, -0.09]).addTo(map)
+    L.marker([51.505, -0.09])
+      .addTo(map)
       .bindPopup('A sample marker!')
       .openPopup();
 
-    // Click handler zum Baum pflanzen
+    // Verwende die Ref in der Click-Funktion
     function onMapClick(e) {
-      if (activeButton === 'baum') {
+      if (activeButtonRef.current === 'baum') {
         const marker = L.marker(e.latlng, { icon: treeIcon }).addTo(map);
         markersRef.current.push(marker);
       }
@@ -45,35 +61,11 @@ function MapComponent({ activeButton }) {
 
     return () => {
       map.off('click', onMapClick);
-      markersRef.current.forEach(marker => map.removeLayer(marker));
-      markersRef.current = [];
       map.remove();
     };
-  }, [activeButton]); // Neu initialisieren, wenn sich activeButton ändert
+  }, []);
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        width: '100vw',
-        backgroundColor: '#ffffff', // white background for the page
-      }}
-    >
-      <div
-        id="map"
-        style={{
-          height: '500px',
-          width: '700px',
-          boxShadow: '0 0 15px rgba(0,0,0,0.1)',
-          borderRadius: '9px',
-        }}
-      />
-    </div>
-  );
+  return <div id="map" />;
 }
 
 export default MapComponent;
-
