@@ -1,0 +1,21 @@
+venv:
+python -m venv venv 
+./venv/scripts/activate
+pip install -r requirements.txt 
+
+newconvert osm to xml:
+netconvert --osm-files temp/osm/opti.osm --output-file temp/xlm/map.net.xml --geometry.remove --roundabouts.guess --junctions.join --tls.guess-signals --ramps.guess --crossings.guess --walkingareas --remove-edges.isolated
+
+open map.net file in netedit.exe (find path with: Get-Command sumo -> eclipse/sumo/bin)
+open network and erase überflüssige streets
+
+convert xml to geojson in sumo:
+python "$env:SUMO_HOME/tools/net/net2geojson.py" `
+   -n temp/xml/cleanmap.net.xml `
+   -o map.geojson `
+   --lanes `
+   --internal `
+
+OSM simplify:
+https://github.com/TSMM-DM/TSMM
+
