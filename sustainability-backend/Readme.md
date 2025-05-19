@@ -5,23 +5,22 @@ This project uses **SUMO** (Simulation of Urban Mobility) to convert OpenStreetM
 ## 📦 Virtual Environment Setup
 
 1. **Create and activate a Python virtual environment:**
-    
-    ```bash
-    python -m venv venv
-    # Windows
-    .\venv\Scripts\activate
-    # macOS/Linux
-    source venv/bin/activate
-    ```
-    
-2. **Install dependencies:**
-    
-    ```bash
-    pip install -r requirements.txt
-    ```
-    
 
-* * *
+   ```bash
+   python -m venv venv
+   # Windows
+   .\venv\Scripts\activate
+   # macOS/Linux
+   source venv/bin/activate
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+---
 
 ## 🛠 Install SUMO
 
@@ -30,7 +29,7 @@ Follow the official guide to install SUMO on your system:
 
 > SUMO includes tools like `netconvert` and `netedit` used in this workflow.
 
-* * *
+---
 
 ## 🌐 Convert OSM to SUMO Network (XML)
 
@@ -50,24 +49,40 @@ netconvert \
   --remove-edges.isolated
 ```
 
-* * *
+---
+
+## 🗺️ Simplify the SUMO Network
+
+Simplify the cleaned SUMO network using `netconvert`:
+
+```bash
+netconvert \
+  --sumo-net-file .\temp\xml\cleanmap.net.xml \
+  --output-file .\temp\xml\simplified.net.xml \
+  --geometry.remove \
+  --geometry.remove.min-length 5 \
+  --geometry.min-dist 1 \
+  --geometry.max-angle.fix \
+  --join-lanes
+```
+
+---
 
 ## ✏️ Edit the Network (Optional)
 
 Use `netedit.exe` to manually clean or edit the generated network:
 
 1. Find `netedit.exe` using PowerShell:
-    
-    ```powershell
-    Get-Command sumo
-    ```
-    
-    Navigate to the `eclipse/sumo/bin` folder and open `netedit.exe`.
-    
-2. Load the `map.net.xml` file and remove unnecessary streets.
-    
 
-* * *
+   ```powershell
+   Get-Command sumo
+   ```
+
+   Navigate to the `eclipse/sumo/bin` folder and open `netedit.exe`.
+
+2. Load the `map.net.xml` file and remove unnecessary streets.
+
+---
 
 ## 🧭 Set SUMO Environment Variable (Windows)
 
@@ -77,7 +92,7 @@ In PowerShell:
 $env:SUMO_HOME = "C:\Program Files (x86)\Eclipse\Sumo"
 ```
 
-* * *
+---
 
 ## 🌍 Convert SUMO Network to GeoJSON
 
@@ -91,7 +106,7 @@ python "$env:SUMO_HOME/tools/net/net2geojson.py" `
   --internal
 ```
 
-* * *
+---
 
 ## 🧹 Optional: Simplify OSM
 
