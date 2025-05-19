@@ -1,17 +1,46 @@
-.bottom-right-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #646cff;
-  color: white;
+.app-container {
+  height: 100vh;
+  width: 100vw;
+  padding: 40px;
+  position: relative;
+  font-family: sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+/* Überschrift bleibt oben und mittig */
+.headline {
+  font-size: 3rem;
+  margin-bottom: 60px;
+  text-align: center;
+}
+
+/* Button-Gruppe oben rechts im Container */
+.button-group {
+  position: absolute;
+  top: 600px;
+  right: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.button-group button {
+  padding: 12px 20px;
+  background-color: #b9dab9;
   border: none;
-  padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  font-size: 1rem;
   transition: background-color 0.3s;
 }
 
-.bottom-right-button:hover {
-  background-color: #4e54c8;
+.button-group button:hover {
+  background-color: #055813;
+  color: white;
 }
+
