@@ -45,7 +45,7 @@ function MapComponent() {
                     height: '500px',
                     width: '700px',
                     boxShadow: '0 0 15px rgba(0,0,0,0.1)',
-                    borderRadius: '8px',
+                    borderRadius: '9px',
                 }}
             />
         </div>
