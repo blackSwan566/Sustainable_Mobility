@@ -22,7 +22,8 @@ function MapComponent() {
             }
         ).addTo(map);
 
-        fetch('/data.json')
+
+        fetch('/map.geojson')
             .then((response) => response.json())
             .then((geojson) => {
                 const geoJsonLayer = L.geoJSON(geojson, {
