@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Traffic Route Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #map {
+        height: 100vh;
+        width: 100vw;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map("map").setView([48.13, 11.56], 13);
+
+      // Use CartoDB's Positron style for minimal black and white look
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: "abcd",
+          maxZoom: 19,
+        }
+      ).addTo(map);
+
+      // Function to validate coordinates
+      function validateCoordinates(coords) {
+        return coords.every(
+          (coord) =>
+            Array.isArray(coord) &&
+            coord.length === 2 &&
+            !isNaN(coord[0]) &&
+            !isNaN(coord[1]) &&
+            coord[0] >= -180 &&
+            coord[0] <= 180 &&
+            coord[1] >= -90 &&
+            coord[1] <= 90
+        );
+      }
+
+      // Function to load and parse CSV
+      async function loadCSV(filename) {
+        const response = await fetch(filename);
+        const text = await response.text();
+        const lines = text.trim().split("\n");
+        const headers = lines[0].split(",");
+
+        return lines.slice(1).map((line) => {
+          const values = line.split(",");
+          return {
+            lat: parseFloat(values[0]),
+            lon: parseFloat(values[1]),
+          };
+        });
+      }
+
+      // Function to display waypoints
+      function displayWaypoints(waypoints) {
+        const bounds = [];
+        waypoints.forEach((point) => {
+          L.circleMarker([point.lat, point.lon], {
+            radius: 5,
+            fillColor: "#ff4444",
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8,
+          }).addTo(map);
+          bounds.push([point.lat, point.lon]);
+        });
+
+        // Create a polyline connecting all waypoints
+        L.polyline(bounds, {
+          color: "#ff4444",
+          weight: 2,
+          opacity: 0.6,
+          dashArray: "5, 10",
+        }).addTo(map);
+
+        return bounds;
+      }
+
+      // Modified loadRoute function to return bounds
+      function loadRoute(filename, dashArray = null) {
+        return fetch(filename)
+          .then((response) => response.json())
+          .then((data) => {
+            const routeBounds = [];
+            data.features.forEach((feature) => {
+              if (!validateCoordinates(feature.geometry.coordinates)) {
+                console.error(
+                  `Invalid coordinates in ${filename}:`,
+                  feature.geometry.coordinates
+                );
+                return;
+              }
+
+              L.geoJSON(feature, {
+                style: {
+                  color: feature.properties.color || "#3388ff",
+                  weight: 4,
+                  opacity: 1,
+                  dashArray: dashArray,
+                },
+              }).addTo(map);
+
+              // Collect bounds
+              feature.geometry.coordinates.forEach((coord) => {
+                routeBounds.push([coord[1], coord[0]]);
+              });
+            });
+            return routeBounds;
+          });
+      }
+
+      // Load both routes and waypoints
+      Promise.all([
+        loadRoute("../geojson/traffic_route.geojson"),
+        loadCSV("../csv/route_waypoints.csv"),
+      ])
+        .then(([routeBounds, waypoints]) => {
+          const waypointBounds = displayWaypoints(waypoints);
+
+          // Combine all bounds and fit map
+          const allBounds = [...(routeBounds || []), ...waypointBounds];
+          if (allBounds.length > 0) {
+            map.fitBounds(allBounds, { padding: [50, 50] });
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading data:", error);
+        });
+    </script>
+  </body>
+</html>

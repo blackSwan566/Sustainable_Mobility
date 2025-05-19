@@ -3,6 +3,7 @@ import polyline
 import json
 import os
 import dotenv
+import pandas as pd
 
 dotenv.load_dotenv()
 
@@ -13,26 +14,16 @@ API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 if not API_KEY:
     raise ValueError("GOOGLE_MAPS_API_KEY not found in environment. Please set it in your .env file.")
 
-# Define coordinates as separate lat/lng pairs
-origin1 = {"location": {"latLng": {"latitude": 47.734050, "longitude": 10.324509}}}
-destination1 = {"location": {"latLng": {"latitude": 47.734050, "longitude": 10.324509}}}
-
-# New routes
-origin2 = {"location": {"latLng": {"latitude": 47.723868, "longitude": 10.311128}}}
-destination2 = {"location": {"latLng": {"latitude": 47.735134, "longitude": 10.309653}}}
-
-origin3 = {"location": {"latLng": {"latitude": 47.717655, "longitude": 10.299065}}}
-destination3 = {"location": {"latLng": {"latitude": 47.733896, "longitude": 10.324935}}}
-
+# Replace the hardcoded waypoints with CSV data
+df = pd.read_csv('./temp/csv/route_waypoints.csv')
 waypoints = [
-    {"location": {"latLng": {"latitude": 47.722866, "longitude": 10.333782}}},
-    {"location": {"latLng": {"latitude": 47.717717, "longitude": 10.298916}}}, 
-    {"location": {"latLng": {"latitude": 47.729799, "longitude": 10.304660}}},
+    {"location": {"latLng": {"latitude": lat, "longitude": lon}}} 
+    for lat, lon in zip(df['lat'], df['lon'])
 ]
 
-waypoints_route3 = [
-    {"location": {"latLng": {"latitude": 47.724745, "longitude": 10.322192}}}
-]
+# Use first and last points as origin/destination
+origin1 = {"location": {"latLng": {"latitude": df['lat'].iloc[0], "longitude": df['lon'].iloc[0]}}}
+destination1 = {"location": {"latLng": {"latitude": df['lat'].iloc[-1], "longitude": df['lon'].iloc[-1]}}}
 
 # -------------------
 # Function to make the Directions API request and process the response
@@ -109,24 +100,12 @@ speed_colors = {
 # -------------------
 # GET TRAFFIC DATA FOR ALL ROUTES
 # -------------------
-geojson_route1 = get_traffic_geojson(origin1, destination1, waypoints)
-geojson_route2 = get_traffic_geojson(origin2, destination2)
-geojson_route3 = get_traffic_geojson(origin3, destination3, waypoints_route3)
+geojson_forward = get_traffic_geojson(origin1, destination1, waypoints)
 
 # -------------------
 # EXPORT GEOJSON DATA
 # -------------------
-if geojson_route1:
-    with open('output/traffic_route_1.geojson', 'w', encoding='utf-8') as f:
-        json.dump(geojson_route1, f, ensure_ascii=False, indent=2)
-    print("✔️ GeoJSON (route 1) exportiert: traffic_route_1.geojson")
-
-if geojson_route2:
-    with open('output/traffic_route_2.geojson', 'w', encoding='utf-8') as f:
-        json.dump(geojson_route2, f, ensure_ascii=False, indent=2)
-    print("✔️ GeoJSON (route 2) exportiert: traffic_route_2.geojson")
-
-if geojson_route3:
-    with open('output/traffic_route_3.geojson', 'w', encoding='utf-8') as f:
-        json.dump(geojson_route3, f, ensure_ascii=False, indent=2)
-    print("✔️ GeoJSON (route 3) exportiert: traffic_route_3.geojson")
+if geojson_forward:
+    with open('temp/geojson/traffic_route.geojson', 'w', encoding='utf-8') as f:
+        json.dump(geojson_forward, f, ensure_ascii=False, indent=2)
+    print("✔️ GeoJSON exported: traffic_route.geojson")
