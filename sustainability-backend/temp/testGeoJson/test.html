@@ -57,12 +57,34 @@
         return html + "</table></div>";
       }
 
-      fetch("../../output/map.geojson")
+      // Color mapping for different edge types
+      const edgeTypeColors = {
+        "highway.primary": "#ff4444",
+        "highway.primary_link": "#ff4444",
+        "highway.secondary": "#44ff44",
+        "highway.secondary_link": "#44ff44",
+        "highway.tertiary": "#4444ff",
+        "highway.tertiary_link": "#4444ff",
+        "highway.residential": "#ffaa44",
+        "highway.residential_link": "#ffaa44",
+        "highway.service": "#44ffff",
+        "highway.pedestrian": "#ff44ff",
+        "highway.cycleway": "#88ff88",
+        "highway.path": "#888888",
+        "highway.unclassified": "#aaaaaa",
+      };
+
+      function getColorByEdgeType(feature) {
+        const edgeType = feature.properties.edge_type || "highway.unclassified";
+        return edgeTypeColors[edgeType] || "#aaaaaa"; // Default gray for unknown types
+      }
+
+      fetch("../../output/final2.geojson")
         .then((response) => response.json())
         .then((data) => {
           const layer = L.geoJSON(data, {
             style: (feature) => ({
-              color: "#3388ff",
+              color: getColorByEdgeType(feature),
               weight: 4,
               opacity: 1,
             }),

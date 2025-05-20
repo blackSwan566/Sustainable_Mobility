@@ -118,37 +118,34 @@ def convert_to_geo_coords(coords, net_offset, proj_params=None):
     if not coords:
         return coords
     
-    # We need:
-    # 1. The actual geographic origin point (should be somewhere in Kempten)
-    # 2. The scale factor to convert from local meters to degrees
+    if not proj_params:
+        print("Warning: No projection parameters provided, coordinates may be inaccurate", file=sys.stderr)
+        return coords
     
-    # Approximate conversion factors for central Europe
-    # At latitude 47.7° (Kempten), one degree is approximately:
-    METERS_PER_LON_DEGREE = 74000  # at latitude 47.7°
-    METERS_PER_LAT_DEGREE = 111000  # roughly constant
-    
-    # Kempten's approximate center
-    BASE_LON = 10.315
-    BASE_LAT = 47.724
-    
-    transformed_coords = []
-    for x, y in coords:
-        # Convert local meters to degree offsets
-        lon_offset = x / METERS_PER_LON_DEGREE
-        lat_offset = y / METERS_PER_LAT_DEGREE
+    try:
+        # Create transformer from the provided projection to WGS84
+        transformer = Transformer.from_proj(proj_params, "+proj=longlat +datum=WGS84", always_xy=True)
         
-        # Add to base coordinates
-        lon = BASE_LON + lon_offset
-        lat = BASE_LAT + lat_offset
+        transformed_coords = []
+        for x, y in coords:
+            # First apply the network offset
+            if net_offset:
+                x = x + net_offset[0]
+                y = y + net_offset[1]
+            
+            # Transform from UTM to geographic coordinates
+            lon, lat = transformer.transform(x, y)
+            transformed_coords.append([lon, lat])
+            
+            # Debug output for first coordinate
+            if len(transformed_coords) == 1:
+                print(f"Debug: Original coords with offset: {[x, y]}")
+                print(f"Debug: After transformation: ({lon}, {lat})")
         
-        transformed_coords.append([lon, lat])
-        
-        # Debug output for first coordinate
-        if len(transformed_coords) == 1:
-            print(f"Debug: Original coords: {[x, y]}")
-            print(f"Debug: After transformation: ({lon}, {lat})")
-    
-    return transformed_coords
+        return transformed_coords
+    except Exception as e:
+        print(f"Warning: Coordinate transformation failed: {str(e)}", file=sys.stderr)
+        return coords
 
 def xml_to_geojson(xml_file, output_file, include_signals=True):
     """Convert XML file to GeoJSON with all metadata preserved."""
@@ -162,6 +159,7 @@ def xml_to_geojson(xml_file, output_file, include_signals=True):
     # Extract projection info if available
     net_offset = None
     projection = None
+    orig_bounds = None
     
     location = root.find('location')
     if location is not None:
@@ -171,6 +169,16 @@ def xml_to_geojson(xml_file, output_file, include_signals=True):
         
         if 'projParameter' in location.attrib:
             projection = location.get('projParameter')
+            
+        if 'origBoundary' in location.attrib:
+            bounds = location.get('origBoundary').split(',')
+            if len(bounds) == 4:
+                orig_bounds = {
+                    'min_lon': float(bounds[0]),
+                    'min_lat': float(bounds[1]),
+                    'max_lon': float(bounds[2]),
+                    'max_lat': float(bounds[3])
+                }
     
     # Get edge metadata
     edge_metadata = parse_edge_metadata(root)
@@ -183,7 +191,11 @@ def xml_to_geojson(xml_file, output_file, include_signals=True):
     # Create GeoJSON feature collection
     geojson = {
         "type": "FeatureCollection",
-        "features": []
+        "features": [],
+        "metadata": {
+            "projection": projection,
+            "original_bounds": orig_bounds
+        }
     }
     
     # Add edges as LineString features
@@ -240,7 +252,7 @@ def xml_to_geojson(xml_file, output_file, include_signals=True):
         coords = signal['coordinates']
         
         if net_offset:
-            coords = [coords[0] + net_offset[0], coords[1] + net_offset[1]]
+            coords = convert_to_geo_coords([coords], net_offset, projection)[0]
         
         feature = {
             "type": "Feature",
