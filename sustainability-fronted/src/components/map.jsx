@@ -27,8 +27,8 @@ function MapComponent({ activeButton }) {
   const activeButtonRef = useRef(activeButton);
   const streetBufferRef = useRef(null);
   const greenRoutesRef = useRef([]);
-  const [startPoint, setStartPoint] = useState(null);
-  const [endPoint, setEndPoint] = useState(null);
+  const startPointRef = useRef(null);
+  const endPointRef = useRef(null);
   const routeLayerRef = useRef(null);
 
   useEffect(() => {
@@ -37,13 +37,14 @@ function MapComponent({ activeButton }) {
     if (activeButton === 'delete') {
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
-      setStartPoint(null);
-      setEndPoint(null);
+      //setStartPoint(null);
+      //setEndPoint(null);
       if (routeLayerRef.current) {
         routeLayerRef.current.remove();
         routeLayerRef.current = null;
       }
     }
+    
   }, [activeButton]);
 
   useEffect(() => {
@@ -117,18 +118,23 @@ function MapComponent({ activeButton }) {
         }
 
         if (activeButtonRef.current === 'route') {
-          const marker = L.marker(e.latlng, {
-            icon: !startPoint ? startIcon : endIcon,
-          }).addTo(map);
-
-          if (!startPoint) {
-            setStartPoint([e.latlng.lng, e.latlng.lat]);
-          } else if (!endPoint) {
-            setEndPoint([e.latlng.lng, e.latlng.lat]);
+            // Nur reagieren, wenn Start- oder Endpunkt noch nicht gesetzt
+            if (!startPointRef.current || !endPointRef.current) {
+              const isStart = !startPointRef.current;
+              const marker = L.marker(e.latlng, {
+                icon: isStart ? startIcon : endIcon,
+              }).addTo(map);
+          
+              if (isStart) {
+                startPointRef.current = [e.latlng.lng, e.latlng.lat];
+              } else {
+                endPointRef.current = [e.latlng.lng, e.latlng.lat];
+              }
+          
+              markersRef.current.push(marker);
+            }
           }
-
-          markersRef.current.push(marker);
-        }
+          
       }
 
       map.on('click', onMapClick);
@@ -143,23 +149,28 @@ function MapComponent({ activeButton }) {
   }, []);
 
   useEffect(() => {
-    if (startPoint && endPoint && greenRoutesRef.current.length > 0 && mapRef.current) {
+    if (
+      startPointRef.current &&
+      endPointRef.current &&
+      greenRoutesRef.current.length > 0 &&
+      mapRef.current
+    ) {
       const lineStrings = greenRoutesRef.current.map(f => f.geometry).flatMap(geom => {
         if (geom.type === 'LineString') return [turf.lineString(geom.coordinates)];
         if (geom.type === 'MultiLineString') return geom.coordinates.map(coords => turf.lineString(coords));
         return [];
       });
-
+  
       const combined = turf.featureCollection(lineStrings);
       const options = { units: 'meters' };
-
+  
       const route = turf.shortestPath(
-        turf.point(startPoint),
-        turf.point(endPoint),
+        turf.point(startPointRef.current),
+        turf.point(endPointRef.current),
         combined,
         options
       );
-
+  
       if (route && route.geometry && route.geometry.coordinates.length > 1) {
         if (routeLayerRef.current) {
           routeLayerRef.current.remove();
@@ -173,7 +184,8 @@ function MapComponent({ activeButton }) {
         }).addTo(mapRef.current);
       }
     }
-  }, [startPoint, endPoint]);
+  }, [greenRoutesRef.current]);
+  
 
   return <div id="map" style={{ height: '100%', width: '100%' }} />;
 }

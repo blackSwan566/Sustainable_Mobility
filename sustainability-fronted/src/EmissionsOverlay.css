@@ -1,0 +1,45 @@
+.emissions-overlay {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 1.2rem;
+  width: 280px;
+  font-family: 'Inter', sans-serif;
+  z-index: 999;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.emissions-overlay h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  color: #2e7d32;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+  color: #333;
+}
+
+.metric .icon {
+  margin-right: 0.6rem;
+  color: #4caf50;
+  stroke-width: 2;
+}
+
+@keyframes fadeIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
