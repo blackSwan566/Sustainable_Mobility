@@ -1,25 +1,14 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import osmtogeojson from 'osmtogeojson';
-import * as turf from '@turf/turf'; // Für Geometrie-Prüfung
-
-
-const treeIcon = L.icon({
-  iconUrl: 'https://symbl-cdn.com/i/webp/58/20ee459c4c89d508400f762cf79392.webp',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-});
 
 function MapComponent({ activeButton }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
-  const activeButtonRef = useRef(activeButton); // <- Ref für aktuellen Button
+  const activeButtonRef = useRef(activeButton);
 
-  // Speichere den aktuellen Button-Wert immer aktuell ab
   useEffect(() => {
     activeButtonRef.current = activeButton;
-
     if (activeButton === 'delete') {
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
@@ -28,11 +17,11 @@ function MapComponent({ activeButton }) {
 
   useEffect(() => {
     const map = L.map('map', {
-      center: [51.505, -0.09],
-      zoom: 13,
+      center: [47.72884553654769, 10.315794113938306],
+      zoom: 19,
       scrollWheelZoom: true,
     });
-    
+
     mapRef.current = map;
 
     L.tileLayer(
@@ -44,45 +33,100 @@ function MapComponent({ activeButton }) {
       }
     ).addTo(map);
 
-
-        fetch('/map.geojson')
-            .then((response) => response.json())
-            .then((geojson) => {
-                const geoJsonLayer = L.geoJSON(geojson, {
-                    style: {
-                        color: 'blue',
-                        weight: 4,
-                        opacity: 0.7,
-                    },
-                }).addTo(map);
-
-                map.fitBounds(geoJsonLayer.getBounds());
-            })
-            .catch((err) => {
-                console.error('Failed to load GeoJSON:', err);
-            });
-    L.marker([51.505, -0.09])
-      .addTo(map)
-      .bindPopup('A sample marker!')
-      .openPopup();
-
-    // Verwende die Ref in der Click-Funktion
-    function onMapClick(e) {
-      if (activeButtonRef.current === 'baum') {
-        const marker = L.marker(e.latlng, { icon: treeIcon }).addTo(map);
-        markersRef.current.push(marker);
-      }
-    }
-
-    map.on('click', onMapClick);
+    fetch('/map.geojson')
+      .then(res => res.json())
+      .then((geojson) => {
+        geojson.features.forEach((feature) => {
+          if (feature.geometry.type === 'LineString') {
+            animateAlongCoordinates(feature.geometry.coordinates, parseFloat(feature.properties.speed));
+          }
+        });
+      })
+      .catch(err => console.error('GeoJSON loading error:', err));
 
     return () => {
-      map.off('click', onMapClick);
       map.remove();
     };
   }, []);
 
-  return <div id="map" />;
+  const distanceMeters = ([lng1, lat1], [lng2, lat2]) => {
+    return mapRef.current
+      ? mapRef.current.distance([lat1, lng1], [lat2, lng2])
+      : 0;
+  };
+
+  function animateAlongCoordinates(coords, speed) {
+    if (!coords || coords.length < 2) return;
+
+    function isLatLng(coord) {
+      return coord[0] > 45 && coord[0] < 50 && coord[1] > 9 && coord[1] < 13;
+    }
+    let fixedCoords = coords;
+    if (isLatLng(coords[0])) {
+      fixedCoords = coords.map(([lat, lng]) => [lng, lat]);
+    }
+
+    const map = mapRef.current;
+
+    let currentSegment = 0; 
+    let progress = 0; 
+
+    const marker = L.circleMarker([fixedCoords[0][1], fixedCoords[0][0]], {
+      radius: 3,
+      color: 'green',
+      fillColor: 'green',
+      fillOpacity: 1,
+    }).addTo(map);
+
+    markersRef.current.push(marker);
+
+    let lastTimestamp = null;
+
+    function step(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = (timestamp - lastTimestamp) / 1000; 
+      lastTimestamp = timestamp;
+
+      
+      const start = fixedCoords[currentSegment];
+      const end = fixedCoords[currentSegment + 1];
+     
+      const segmentLength = distanceMeters(start, end);
+
+      const distanceToMove = speed * delta; 
+
+     
+      const segmentProgressMeters = progress * segmentLength + distanceToMove;
+
+      if (segmentProgressMeters >= segmentLength) {
+
+        currentSegment++;
+        if (currentSegment >= fixedCoords.length - 1) {
+         
+          currentSegment = 0;
+        }
+        progress = 0;
+      } else {
+
+        progress = segmentProgressMeters / segmentLength;
+      }
+
+     
+      const interpLng = start[0] + (end[0] - start[0]) * progress;
+      const interpLat = start[1] + (end[1] - start[1]) * progress;
+
+    
+      console.log('Marker bewegt sich zu:', interpLat, interpLng);
+
+      marker.setLatLng([interpLat, interpLng]);
+
+      requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  return <div id="map" style={{ height: '100vh', width: '100%' }} />;
 }
 
 export default MapComponent;

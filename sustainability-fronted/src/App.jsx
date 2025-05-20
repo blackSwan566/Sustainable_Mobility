@@ -18,9 +18,7 @@ function App() {
       <div className="topbar">
         <div className="header-container">
           <h1 className="headline">KemptAInability</h1>
-          <img src="images/lmu_logo.png" alt="LMU Logo" className="header-logo" />
-          <img src="images/kempten_logo.png" alt="Stadt Kempten Logo" className="header-logo" />
-          <img src="images/ziele_logo.jpg" alt="Stadt Kempten Ziele Logo" className="header-logo" />
+
         </div>
         <div className="tab-group">
           <button
