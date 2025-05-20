@@ -44,6 +44,23 @@ function MapComponent({ activeButton }) {
       }
     ).addTo(map);
 
+
+        fetch('/map.geojson')
+            .then((response) => response.json())
+            .then((geojson) => {
+                const geoJsonLayer = L.geoJSON(geojson, {
+                    style: {
+                        color: 'blue',
+                        weight: 4,
+                        opacity: 0.7,
+                    },
+                }).addTo(map);
+
+                map.fitBounds(geoJsonLayer.getBounds());
+            })
+            .catch((err) => {
+                console.error('Failed to load GeoJSON:', err);
+            });
     L.marker([51.505, -0.09])
       .addTo(map)
       .bindPopup('A sample marker!')
