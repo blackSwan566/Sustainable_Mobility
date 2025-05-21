@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as turf from '@turf/turf';
 
-const clickPoint  = [0, 0];
+let clickPoint  = [0, 0];
 const treeIcon = L.icon({
   iconUrl: 'https://symbl-cdn.com/i/webp/dd/8b7f393a72b7705da89b5b87a1d340.webp',
   iconSize: [32, 32],
