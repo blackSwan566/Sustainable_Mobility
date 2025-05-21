@@ -5,23 +5,7 @@ import * as turf from '@turf/turf';
 
 let clickPoint = [0, 0];
 
-const treeIcon = L.icon({
-  iconUrl: 'https://symbl-cdn.com/i/webp/dd/8b7f393a72b7705da89b5b87a1d340.webp',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-});
 
-const startIcon = L.icon({
-  iconUrl: 'https://em-content.zobj.net/source/apple/76/round-pushpin_1f4cd.png',
-  iconSize: [24, 24],
-  iconAnchor: [12, 24],
-});
-
-const endIcon = L.icon({
-  iconUrl: 'https://em-content.zobj.net/source/apple/76/chequered-flag_1f3c1.png',
-  iconSize: [24, 24],
-  iconAnchor: [12, 24],
-});
 
 function MapComponent({ activeButton }) {
   const mapRef = useRef(null);
@@ -36,20 +20,7 @@ function MapComponent({ activeButton }) {
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
 
-  useEffect(() => {
-    activeButtonRef.current = activeButton;
-    if (activeButton === 'delete') {
-      markersRef.current.forEach(marker => marker.remove());
-      markersRef.current = [];
-      setStartPoint(null);
-      setEndPoint(null);
-      if (routeLayerRef.current) {
-        routeLayerRef.current.remove();
-        routeLayerRef.current = null;
-      }
-    }
-  }, [activeButton]);
-
+  
   useEffect(() => {
     const map = L.map('map', {
       center: [47.72884553654769, 10.315794113938306],
@@ -145,11 +116,13 @@ function MapComponent({ activeButton }) {
     requestAnimationFrame(step);
 
     map.on('click', (e) => {
-      if (activeButtonRef.current === 'baum') {
+      if (activeButtonRef.current === 'barrier') {
         const newMarker = L.marker(e.latlng, { icon: treeIcon }).addTo(map);
         markersRef.current.push(newMarker);
         clickPoint = turf.point([e.latlng.lng, e.latlng.lat]);
+        console.log(clickPoint);
       }
+        
 
       if (activeButtonRef.current === 'route') {
         const icon = !startPoint ? startIcon : endIcon;

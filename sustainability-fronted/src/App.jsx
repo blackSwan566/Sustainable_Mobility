@@ -4,14 +4,22 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 import './App.css';
 
+const barrierIcon = L.icon({
+  iconUrl: 'https://symbl-cdn.com/i/webp/dd/8b7f393a72b7705da89b5b87a1d340.webp',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
+
+let clickPoint = [0, 0];
+
 const TrafficNetwork = () => {
   const mapRef = useRef(null);
   const vehicleCountRef = useRef(100);
   const speedFactorRef = useRef(1);
-
+  const barrier = useRef([]);
   const [vehicleCount, setVehicleCount] = useState(100);
   const [speedFactor, setSpeedFactor] = useState(1);
-
+  const [activeButton, setActiveButton] = useState(null);
   const networkGraphRef = useRef(null);
   const networkDataRef = useRef(null);
   const vehicleMarkersRef = useRef([]);
@@ -19,12 +27,48 @@ const TrafficNetwork = () => {
   const animationRef = useRef(null);
   const pathLayerRef = useRef(null);
   const heatLayersRef = useRef({});
+useEffect(() => {
+  const map = mapRef.current?._leaflet_map;
+  if (!map) return;
+
+  // Direkt löschen, wenn Button geklickt wurde
+  if (activeButton === 'delete') {
+    barrier.current.forEach(({ marker }) => {
+      if (marker) {
+        map.removeLayer(marker);
+      }
+    });
+    barrier.current = [];
+    setActiveButton(null); // Nur einmal löschen
+    return; // Wichtig: Kein Event-Handler registrieren!
+  }
+
+  // Event-Handler für "barrier"
+  const handleClick = (e) => {
+    if (activeButton === 'barrier') {
+      const marker = L.marker(e.latlng, { icon: barrierIcon }).addTo(map);
+      barrier.current.push({ marker, trail: null });
+      clickPoint = [e.latlng.lng, e.latlng.lat];
+      console.log(clickPoint);
+      setActiveButton(null); // Nur eine Barrier setzen
+    }
+  };
+
+  map.on('click', handleClick);
+
+  return () => {
+    map.off('click', handleClick);
+  };
+}, [activeButton]);
+
 
   useEffect(() => {
     if (mapRef.current && mapRef.current._leaflet_map) return;
 
     const map = L.map(mapRef.current).setView([48.13, 11.56], 13);
     mapRef.current._leaflet_map = map;
+
+    
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       subdomains: "abcd",
@@ -292,8 +336,15 @@ const TrafficNetwork = () => {
         <div className="map-overlay">
           <h2 className="headline2">Simulation Features</h2>
           <div className="tab-group vertical">
-            <button className='tab'>🚧 SET BARRIER</button>
-            <button className='tab'>❌ DELETE BARRIER</button>
+            <button
+              className={`tab ${activeButton === 'barrier' ? 'active' : ''}`}
+              onClick={() => setActiveButton('barrier')}
+            >🚧 SET BARRIER</button>
+
+            <button
+              className={`tab ${activeButton === 'delete' ? 'active' : ''}`}
+              onClick={() => setActiveButton('delete')}
+            >❌ DELETE BARRIER</button>
           </div>
         </div>
 
@@ -332,6 +383,7 @@ const TrafficNetwork = () => {
         </div>
 
         <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+        
 
         <div className="controls">
           <label>
