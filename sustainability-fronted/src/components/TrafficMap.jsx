@@ -203,8 +203,7 @@ export const TrafficMap = ({
       });
 
       log(
-        `Graph built: ${networkGraph.edges.length} edges, ${
-          Object.keys(networkGraph.nodes).length
+        `Graph built: ${networkGraph.edges.length} edges, ${Object.keys(networkGraph.nodes).length
         } nodes`
       );
 
