@@ -109,9 +109,9 @@ function MapComponent({ activeButton }) {
         if (activeButtonRef.current === 'baum') {
             const marker = L.marker(e.latlng, { icon: treeIcon }).addTo(map);
             markersRef.current.push(marker);
-            const clickPoint = turf.point([e.latlng.lng, e.latlng.lat]);
-            const isOnStreet = turf.booleanPointInPolygon(clickPoint, streetBufferRef.current);
-
+            const clickPoint = [e.latlng.lng, e.latlng.lat];
+            console.log('Start point set:'+  clickPoint);
+            
           
         
           
@@ -127,8 +127,10 @@ function MapComponent({ activeButton }) {
           
               if (isStart) {
                 startPointRef.current = [e.latlng.lng, e.latlng.lat];
+                console.log('Start point set:'+ startPointRef.current);
               } else {
                 endPointRef.current = [e.latlng.lng, e.latlng.lat];
+                console.log('End point set:'+ endPointRef.current);
               }
           
               markersRef.current.push(marker);

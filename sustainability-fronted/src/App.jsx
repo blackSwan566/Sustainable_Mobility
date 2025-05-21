@@ -23,17 +23,18 @@ function App() {
         <div className="map-overlay">
           <h2 className="headline2">Simulation Features</h2>
           <div className="tab-group vertical">
-            <button
-              onClick={() => handleClick('baum')}
-              className={activeButton === 'baum' ? 'tab active' : 'tab'}
-            >
-              🚧  BARRIOR
-            </button>
+      
             <button
               onClick={() => handleClick('route')}
               className={activeButton === 'route' ? 'tab active' : 'tab'}
             >
              🚗 ROUTE
+            </button>
+            <button
+              onClick={() => handleClick('baum')}
+              className={activeButton === 'baum' ? 'tab active' : 'tab'}
+            >
+              🚧  BARRIOR
             </button>
             <button
               onClick={() => handleClick('delete')}
@@ -48,9 +49,9 @@ function App() {
           <h2 className="headline2">Reductions & Savings</h2>
           
           <div className="impact-box">
-            <div className="impact-icon">🌱</div>
+            
             <div className="impact-content">
-              <p className="impact-label">CO₂ Emissions</p>
+              <p className="impact-label">🌱CO₂ Emissions</p>
               <div className="progress-bar">
                 <div className="progress-fill co2" style={{ width: '65%' }}></div>
               </div>
@@ -59,20 +60,21 @@ function App() {
           </div>
 
           <div className="impact-box">
-            <div className="impact-icon">🔉</div>
+            
             <div className="impact-content">
-              <p className="impact-label">Noise Reduction</p>
+              <p className="impact-label"> 🔉Noise Reduction</p>
               <div className="progress-bar">
                 <div className="progress-fill noise" style={{ width: '50%' }}></div>
-              </div>
+            </div>
               <p className="impact-value">−50%</p>
+            
             </div>
           </div>
 
           <div className="impact-box">
-            <div className="impact-icon">🚗⏳</div>
+            
             <div className="impact-content">
-              <p className="impact-label">Traffic Delay</p>
+              <p className="impact-label">🚗⏳ Traffic Delay</p>
               <div className="progress-bar">
                 <div className="progress-fill traffic" style={{ width: '70%' }}></div>
               </div>
