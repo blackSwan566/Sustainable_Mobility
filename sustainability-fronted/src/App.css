@@ -90,7 +90,7 @@
 
 .map-section {
   height: calc(90vh - 0px);
-  width: calc(100vw - 70px);
+  width: calc(100vw - 30px);
   position: relative;
   scroll-snap-align: start;
   background-color: #ffffff;
