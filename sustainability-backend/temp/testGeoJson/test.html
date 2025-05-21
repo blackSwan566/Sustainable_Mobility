@@ -2,29 +2,40 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Traffic Route Map</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Traffic Network</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <style>
       #map {
         height: 100vh;
         width: 100vw;
       }
-      .popup-content {
-        font-family: Arial, sans-serif;
+      .controls {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      }
+      #debug {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        font-family: monospace;
         font-size: 12px;
-      }
-      .popup-content table {
-        border-collapse: collapse;
-      }
-      .popup-content td {
-        padding: 2px 5px;
-        border-bottom: 1px solid #eee;
-      }
-      .popup-content td:first-child {
-        font-weight: bold;
-        color: #666;
+        max-width: 300px;
+        max-height: 200px;
+        overflow: auto;
       }
     </style>
+
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -32,74 +43,884 @@
   </head>
   <body>
     <div id="map"></div>
+    <div class="controls">
+      <label
+        >Vehicles:
+        <input
+          type="range"
+          id="vehicle-count"
+          min="10"
+          max="500"
+          value="100"
+          step="10"
+      /></label>
+      <span id="vehicle-display">100</span>
+      <br />
+      <label
+        >Speed:
+        <input
+          type="range"
+          id="speed-factor"
+          min="0.5"
+          max="5"
+          value="1"
+          step="0.5"
+      /></label>
+      <span id="speed-display">1x</span>
+    </div>
+    <div id="debug"></div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- heat-map plugin (only used later) -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
     <script>
+      // Debug function
+      function log(message) {
+        const debugDiv = document.getElementById("debug");
+        if (debugDiv) {
+          const entry = document.createElement("div");
+          entry.textContent = message;
+          debugDiv.appendChild(entry);
+          // Keep only last 5 messages
+          while (debugDiv.children.length > 5) {
+            debugDiv.removeChild(debugDiv.firstChild);
+          }
+          console.log(message);
+        }
+      }
+
       const map = L.map("map").setView([48.13, 11.56], 13);
 
-      // Use CartoDB's Positron style for minimal black and white look
+      // Base tile layer
       L.tileLayer(
         "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
           subdomains: "abcd",
           maxZoom: 19,
+          attribution: "&copy; OSM & CARTO",
         }
       ).addTo(map);
 
-      function createPopup(properties) {
-        let html = '<div class="popup-content"><table>';
-        for (const [key, value] of Object.entries(properties)) {
-          if (value !== null && value !== "") {
-            html += `<tr><td>${key}</td><td>${value}</td></tr>`;
-          }
-        }
-        return html + "</table></div>";
-      }
-
-      // Color mapping for different edge types
       const edgeTypeColors = {
         "highway.primary": "#ff4444",
-        "highway.primary_link": "#ff4444",
         "highway.secondary": "#44ff44",
-        "highway.secondary_link": "#44ff44",
         "highway.tertiary": "#4444ff",
-        "highway.tertiary_link": "#4444ff",
         "highway.residential": "#ffaa44",
-        "highway.residential_link": "#ffaa44",
         "highway.service": "#44ffff",
-        "highway.pedestrian": "#ff44ff",
-        "highway.cycleway": "#88ff88",
-        "highway.path": "#888888",
-        "highway.unclassified": "#aaaaaa",
+        default: "#aaaaaa",
       };
+      const getColor = (f) =>
+        edgeTypeColors[f.properties.edge_type] || edgeTypeColors.default;
 
-      function getColorByEdgeType(feature) {
-        const edgeType = feature.properties.edge_type || "highway.unclassified";
-        return edgeTypeColors[edgeType] || "#aaaaaa"; // Default gray for unknown types
+      // Variables for network and vehicles
+      let networkData;
+      let vehicles = [];
+      let animationFrameId;
+      let speedFactor = 1;
+      let vehicleCount = 100;
+      let vehicleMarkers = [];
+      let networkGraph;
+      let networkLayer;
+      let pathVisualizationLayer;
+      let simulationActive = true;
+      let lastTimestamp;
+
+      // Constants for coordinate matching (in meters)
+      const COORDINATE_PRECISION = 0.000001; // ~0.1m at equator
+      const CONNECTION_THRESHOLD = 5; // 5 meters distance threshold for connecting nodes
+
+      // Initial fetch of network data
+      fetch("../../output/final2.geojson")
+        .then((r) => r.json())
+        .then((data) => {
+          log("GeoJSON loaded successfully");
+          networkData = data;
+
+          try {
+            // Create the network layer with road segments
+            networkLayer = L.geoJSON(data, {
+              style: (f) => ({ color: getColor(f), weight: 4, opacity: 0.7 }),
+            }).addTo(map);
+
+            map.fitBounds(networkLayer.getBounds(), { padding: [50, 50] });
+
+            // Build the graph representation
+            buildNetworkGraph();
+
+            // Create path visualization layer (initially empty)
+            createPathVisualizationLayer();
+
+            // Initialize vehicles
+            initVehicles(vehicleCount);
+
+            // Start animation
+            startAnimation();
+
+            /* Set up layer controls -------------------------- */
+            window.heatJam = L.heatLayer([], {
+              radius: 20,
+              maxZoom: 19,
+              gradient: { 0.4: "#00f", 0.7: "#ff0", 1: "#f00" },
+            }).addTo(map);
+            window.heatCO2 = L.heatLayer([], {
+              radius: 20,
+              maxZoom: 19,
+              gradient: { 0.4: "#0f0", 0.7: "#ff0", 1: "#f00" },
+            });
+            window.heatNoise = L.heatLayer([], {
+              radius: 20,
+              maxZoom: 19,
+              gradient: { 0.4: "#0ff", 0.7: "#ff0", 1: "#f0f" },
+            });
+
+            const overlayMaps = {
+              "Traffic Network": networkLayer,
+              "Path Visualization": pathVisualizationLayer,
+              "Traffic jam": heatJam,
+              "CO₂": heatCO2,
+              "Noise [dB]": heatNoise,
+            };
+
+            L.control.layers(null, overlayMaps).addTo(map);
+          } catch (err) {
+            log("Error during initialization: " + err.message);
+            console.error("Error during initialization:", err);
+          }
+        })
+        .catch((err) => {
+          log("Error loading GeoJSON: " + err.message);
+          console.error("Error loading GeoJSON:", err);
+        });
+
+      // Calculate distance between two coordinates in meters
+      function coordDistanceMeters(coord1, coord2) {
+        try {
+          const latlng1 = L.latLng(coord1[1], coord1[0]);
+          const latlng2 = L.latLng(coord2[1], coord2[0]);
+          return latlng1.distanceTo(latlng2);
+        } catch (err) {
+          console.error("Error calculating distance:", err, coord1, coord2);
+          return Infinity;
+        }
       }
 
-      fetch("../../output/final2.geojson")
-        .then((response) => response.json())
-        .then((data) => {
-          const layer = L.geoJSON(data, {
-            style: (feature) => ({
-              color: getColorByEdgeType(feature),
-              weight: 4,
-              opacity: 1,
-            }),
-            onEachFeature: (feature, layer) => {
-              layer.bindPopup(createPopup(feature.properties), {
-                closeButton: false,
-              });
-              layer.on("mouseover", () => layer.openPopup());
-              layer.on("mouseout", () => layer.closePopup());
-            },
-          }).addTo(map);
+      // Find the closest node to a given coordinate
+      function findClosestNode(coord, maxDistance) {
+        let closest = null;
+        let minDistance = maxDistance || Infinity;
 
-          map.fitBounds(layer.getBounds(), { padding: [50, 50] });
-        })
-        .catch((error) => console.error("Error loading data:", error));
+        Object.keys(networkGraph.nodes).forEach((nodeKey) => {
+          const node = networkGraph.nodes[nodeKey];
+          const distance = coordDistanceMeters(
+            [coord[0], coord[1]],
+            [node.latlng[1], node.latlng[0]]
+          );
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            closest = nodeKey;
+          }
+        });
+
+        return closest;
+      }
+
+      // Build network graph for routing
+      function buildNetworkGraph() {
+        networkGraph = {
+          nodes: {},
+          edges: [],
+        };
+
+        log("Building network graph...");
+
+        try {
+          // First pass: Create all nodes
+          networkData.features.forEach((feature, idx) => {
+            if (feature.geometry.type !== "LineString") return;
+
+            const coords = feature.geometry.coordinates;
+            if (!coords || coords.length < 2) return;
+
+            // Create nodes for the start and end of each segment
+            const startCoord = coords[0].join(",");
+            const endCoord = coords[coords.length - 1].join(",");
+
+            // Add start node if it doesn't exist
+            if (!networkGraph.nodes[startCoord]) {
+              networkGraph.nodes[startCoord] = {
+                connections: [],
+                latlng: [coords[0][1], coords[0][0]],
+                coordArray: coords[0],
+              };
+            }
+
+            // Add end node if it doesn't exist
+            if (!networkGraph.nodes[endCoord]) {
+              networkGraph.nodes[endCoord] = {
+                connections: [],
+                latlng: [
+                  coords[coords.length - 1][1],
+                  coords[coords.length - 1][0],
+                ],
+                coordArray: coords[coords.length - 1],
+              };
+            }
+
+            // Add edge
+            networkGraph.edges.push({
+              id: idx,
+              start: startCoord,
+              end: endCoord,
+              feature: feature,
+              length: calculatePathLength(coords),
+              startCoordArray: coords[0],
+              endCoordArray: coords[coords.length - 1],
+            });
+          });
+
+          // Second pass: Connect nodes that are close to each other
+          const nodeKeys = Object.keys(networkGraph.nodes);
+          for (let i = 0; i < nodeKeys.length; i++) {
+            const nodeKey1 = nodeKeys[i];
+            const node1 = networkGraph.nodes[nodeKey1];
+
+            for (let j = i + 1; j < nodeKeys.length; j++) {
+              const nodeKey2 = nodeKeys[j];
+              const node2 = networkGraph.nodes[nodeKey2];
+
+              // Calculate distance between nodes
+              const distance = coordDistanceMeters(
+                node1.coordArray,
+                node2.coordArray
+              );
+
+              // If nodes are very close, they're effectively the same node
+              if (distance < CONNECTION_THRESHOLD) {
+                // Add bidirectional connections
+                if (!node1.connections.includes(nodeKey2)) {
+                  node1.connections.push(nodeKey2);
+                }
+
+                if (!node2.connections.includes(nodeKey1)) {
+                  node2.connections.push(nodeKey1);
+                }
+              }
+            }
+          }
+
+          // Third pass: Add actual connections based on edges
+          networkGraph.edges.forEach((edge) => {
+            // Connect start node to end node
+            const startNode = networkGraph.nodes[edge.start];
+            if (startNode && !startNode.connections.includes(edge.end)) {
+              startNode.connections.push(edge.end);
+            }
+          });
+
+          log(
+            `Graph built: ${networkGraph.edges.length} edges, ${
+              Object.keys(networkGraph.nodes).length
+            } nodes`
+          );
+        } catch (err) {
+          log("Error building graph: " + err.message);
+          console.error("Error building graph:", err);
+        }
+      }
+
+      // Calculate path length in meters
+      function calculatePathLength(coordinates) {
+        try {
+          let length = 0;
+          for (let i = 1; i < coordinates.length; i++) {
+            const p1 = L.latLng(coordinates[i - 1][1], coordinates[i - 1][0]);
+            const p2 = L.latLng(coordinates[i][1], coordinates[i][0]);
+            length += p1.distanceTo(p2);
+          }
+          return Math.max(length, 1); // Ensure no zero lengths
+        } catch (err) {
+          console.error("Error calculating path length:", err);
+          return 1; // Default to 1 meter to avoid division by zero
+        }
+      }
+
+      // Create a layer to visualize paths
+      function createPathVisualizationLayer() {
+        try {
+          pathVisualizationLayer = L.layerGroup();
+
+          // Initialize with random paths for selected vehicles
+          if (networkGraph && networkGraph.edges.length > 0) {
+            // Visualize random paths
+            for (let i = 0; i < 5; i++) {
+              const randomPath = generateRandomPath(
+                5 + Math.floor(Math.random() * 5)
+              );
+              if (randomPath.length > 0) {
+                const pathCoordinates = randomPath.flatMap((edgeIdx) => {
+                  const edge = networkGraph.edges[edgeIdx];
+                  return edge.feature.geometry.coordinates.map((coord) => [
+                    coord[1],
+                    coord[0],
+                  ]);
+                });
+
+                L.polyline(pathCoordinates, {
+                  color: `hsl(${Math.floor(Math.random() * 360)}, 80%, 50%)`,
+                  weight: 6,
+                  opacity: 0.7,
+                }).addTo(pathVisualizationLayer);
+              }
+            }
+          }
+        } catch (err) {
+          log("Error creating path visualization: " + err.message);
+          console.error("Error creating path visualization:", err);
+        }
+      }
+
+      // Find edges that connect to a given node
+      function findConnectedEdges(nodeKey) {
+        const connectedEdges = [];
+
+        networkGraph.edges.forEach((edge, index) => {
+          if (edge.start === nodeKey || edge.end === nodeKey) {
+            connectedEdges.push(index);
+          }
+        });
+
+        return connectedEdges;
+      }
+
+      // Generate a random path through the network
+      function generateRandomPath(length) {
+        if (!networkGraph || networkGraph.edges.length === 0) return [];
+
+        try {
+          const path = [];
+          let currentEdgeIdx = Math.floor(
+            Math.random() * networkGraph.edges.length
+          );
+
+          for (let i = 0; i < length; i++) {
+            path.push(currentEdgeIdx);
+
+            const edge = networkGraph.edges[currentEdgeIdx];
+            if (!edge) break;
+
+            const endNode = edge.end;
+            const possibleEdges = [];
+
+            // Find edges that start from our current end node
+            networkGraph.edges.forEach((e, idx) => {
+              if (e.start === endNode && idx !== currentEdgeIdx) {
+                possibleEdges.push(idx);
+              }
+            });
+
+            // If no forward connections, try to find nearby edges
+            if (possibleEdges.length === 0) {
+              const endCoord = edge.endCoordArray;
+
+              networkGraph.edges.forEach((e, idx) => {
+                if (idx !== currentEdgeIdx) {
+                  const dist = coordDistanceMeters(endCoord, e.startCoordArray);
+                  if (dist < CONNECTION_THRESHOLD) {
+                    possibleEdges.push(idx);
+                  }
+                }
+              });
+            }
+
+            // If still no options, end the path
+            if (possibleEdges.length === 0) break;
+
+            // Select a random connected edge
+            currentEdgeIdx =
+              possibleEdges[Math.floor(Math.random() * possibleEdges.length)];
+          }
+
+          return path;
+        } catch (err) {
+          console.error("Error generating path:", err);
+          return [];
+        }
+      }
+
+      // Initialize the vehicles
+      function initVehicles(count) {
+        log(`Initializing ${count} vehicles...`);
+
+        try {
+          // Clear existing vehicles
+          clearVehicles();
+
+          vehicles = [];
+          vehicleMarkers = [];
+
+          // Get random edge indices
+          const edges = networkGraph.edges;
+
+          if (!edges || edges.length === 0) {
+            log("No edges available to place vehicles");
+            return;
+          }
+
+          for (let i = 0; i < count; i++) {
+            try {
+              // Pick a random edge to start on
+              const randomEdgeIdx = Math.floor(Math.random() * edges.length);
+              const edge = edges[randomEdgeIdx];
+              if (
+                !edge ||
+                !edge.feature ||
+                !edge.feature.geometry ||
+                !edge.feature.geometry.coordinates
+              ) {
+                console.error("Invalid edge at index:", randomEdgeIdx);
+                continue;
+              }
+
+              const path = edge.feature.geometry.coordinates;
+              if (path.length < 2) {
+                continue;
+              }
+
+              // Random position along the path
+              const progress = Math.random();
+              const segmentIndex = Math.floor(progress * (path.length - 1));
+              const segmentProgress =
+                progress * (path.length - 1) - segmentIndex;
+
+              const start = path[segmentIndex];
+              const end = path[segmentIndex + 1];
+
+              // Interpolate position
+              const lng = start[0] + (end[0] - start[0]) * segmentProgress;
+              const lat = start[1] + (end[1] - start[1]) * segmentProgress;
+
+              // Base speed in meters per second (5-20 m/s = ~18-72 km/h)
+              const baseSpeed = 5 + Math.random() * 15;
+
+              // Create vehicle object
+              const vehicle = {
+                id: i,
+                lng: lng,
+                lat: lat,
+                currentEdge: randomEdgeIdx,
+                progress: progress,
+                pathIndex: segmentIndex,
+                pathProgress: segmentProgress,
+                // Speed in meters per second
+                speed: baseSpeed,
+                // Distance already traveled in current segment in meters
+                distanceTraveled: 0,
+                currentSegmentLength: 0,
+                color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
+                trail: [], // Store recent positions for trail effect
+                // Store the planned route (sequence of edge IDs)
+                plannedRoute: [randomEdgeIdx],
+                routeIndex: 0,
+                lastUpdateTime: 0,
+              };
+
+              vehicles.push(vehicle);
+
+              // Create marker for vehicle
+              const marker = L.circleMarker([lat, lng], {
+                radius: 4,
+                fillColor: vehicle.color,
+                color: vehicle.color,
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8,
+              }).addTo(map);
+
+              // Store marker reference
+              vehicleMarkers.push({
+                marker: marker,
+                trail: null,
+              });
+            } catch (err) {
+              console.error("Error creating vehicle:", err);
+            }
+          }
+
+          log(`${vehicles.length} vehicles initialized`);
+        } catch (err) {
+          log("Error initializing vehicles: " + err.message);
+          console.error("Error initializing vehicles:", err);
+        }
+      }
+
+      // Plan a route for a vehicle
+      function planRoute(vehicle, steps = 5) {
+        try {
+          const route = [vehicle.currentEdge];
+          let currentEdgeIdx = vehicle.currentEdge;
+
+          for (let i = 0; i < steps; i++) {
+            const edge = networkGraph.edges[currentEdgeIdx];
+            if (!edge) break;
+
+            const endNode = edge.end;
+            const possibleEdges = [];
+
+            // Find edges that connect to our current end node
+            networkGraph.edges.forEach((e, idx) => {
+              // Don't go back to the edge we just came from
+              if (idx !== currentEdgeIdx && route.indexOf(idx) === -1) {
+                if (e.start === endNode) {
+                  possibleEdges.push(idx);
+                }
+              }
+            });
+
+            // If no direct connections, find close edges
+            if (possibleEdges.length === 0) {
+              networkGraph.edges.forEach((e, idx) => {
+                // Don't go back to the edge we just came from
+                if (idx !== currentEdgeIdx && route.indexOf(idx) === -1) {
+                  const dist = coordDistanceMeters(
+                    edge.endCoordArray,
+                    e.startCoordArray
+                  );
+                  if (dist < CONNECTION_THRESHOLD) {
+                    possibleEdges.push(idx);
+                  }
+                }
+              });
+            }
+
+            // If still no valid edges, break
+            if (possibleEdges.length === 0) break;
+
+            // Pick a random edge to continue on
+            currentEdgeIdx =
+              possibleEdges[Math.floor(Math.random() * possibleEdges.length)];
+            route.push(currentEdgeIdx);
+          }
+
+          return route;
+        } catch (err) {
+          console.error("Error planning route:", err);
+          return [vehicle.currentEdge]; // Return current edge as fallback
+        }
+      }
+
+      // Clear all vehicles from the map
+      function clearVehicles() {
+        vehicleMarkers.forEach((v) => {
+          if (v.marker) map.removeLayer(v.marker);
+          if (v.trail) map.removeLayer(v.trail);
+        });
+        vehicleMarkers = [];
+        vehicles = [];
+      }
+
+      // Animation loop
+      function updateVehicles(timestamp) {
+        if (!vehicles.length || !simulationActive) return;
+
+        vehicles.forEach((vehicle, idx) => {
+          try {
+            // Calculate time delta (in seconds)
+            const deltaTime = vehicle.lastUpdateTime
+              ? (timestamp - vehicle.lastUpdateTime) / 1000
+              : 0.016;
+
+            // Update last timestamp
+            vehicle.lastUpdateTime = timestamp;
+
+            // Prevent very large time jumps
+            if (deltaTime > 0.1) {
+              // Calculate distance to move in meters
+              const distanceToMove =
+                vehicle.speed * speedFactor * Math.min(deltaTime, 0.1);
+              updateVehiclePosition(vehicle, distanceToMove, idx);
+            } else {
+              // Calculate distance to move in meters
+              const distanceToMove = vehicle.speed * speedFactor * deltaTime;
+              updateVehiclePosition(vehicle, distanceToMove, idx);
+            }
+          } catch (err) {
+            console.error("Error updating vehicle:", err, vehicle);
+          }
+        });
+      }
+
+      // Update vehicle position based on distance to move
+      function updateVehiclePosition(vehicle, distanceToMove, idx) {
+        try {
+          // Get the current edge
+          const edge = networkGraph.edges[vehicle.currentEdge];
+          if (!edge || !edge.feature || !edge.feature.geometry) {
+            console.error("Invalid edge:", vehicle.currentEdge);
+            return;
+          }
+
+          // Get the path coordinates
+          const path = edge.feature.geometry.coordinates;
+          if (!path || path.length < 2) {
+            console.error("Invalid path:", path);
+            return;
+          }
+
+          // Add the distance to travel to the current segment
+          vehicle.distanceTraveled += distanceToMove;
+
+          // Calculate the current segment length if needed
+          if (vehicle.currentSegmentLength <= 0) {
+            if (vehicle.pathIndex >= path.length - 1) {
+              // We've reached the end of this edge
+              moveVehicleToNextEdge(vehicle, idx);
+              return; // Exit function as we've moved to a new edge
+            }
+
+            const p1 = L.latLng(
+              path[vehicle.pathIndex][1],
+              path[vehicle.pathIndex][0]
+            );
+            const p2 = L.latLng(
+              path[vehicle.pathIndex + 1][1],
+              path[vehicle.pathIndex + 1][0]
+            );
+            vehicle.currentSegmentLength = p1.distanceTo(p2) || 1;
+          }
+
+          // If we've moved beyond the current segment, advance to next segment
+          while (vehicle.distanceTraveled >= vehicle.currentSegmentLength) {
+            // Move to next path segment
+            vehicle.distanceTraveled -= vehicle.currentSegmentLength;
+            vehicle.pathIndex++;
+
+            // If we've reached the end of the current path
+            if (vehicle.pathIndex >= path.length - 1) {
+              // We've reached the end of this edge
+              moveVehicleToNextEdge(vehicle, idx);
+              return; // Exit function as we've moved to a new edge
+            }
+
+            // Calculate length of new segment
+            const p1 = L.latLng(
+              path[vehicle.pathIndex][1],
+              path[vehicle.pathIndex][0]
+            );
+            const p2 = L.latLng(
+              path[vehicle.pathIndex + 1][1],
+              path[vehicle.pathIndex + 1][0]
+            );
+            vehicle.currentSegmentLength = p1.distanceTo(p2) || 1;
+          }
+
+          // Calculate progress within current segment
+          const segmentProgress =
+            vehicle.currentSegmentLength > 0
+              ? vehicle.distanceTraveled / vehicle.currentSegmentLength
+              : 0;
+
+          // Interpolate position
+          const start = path[vehicle.pathIndex];
+          const end = path[vehicle.pathIndex + 1];
+
+          vehicle.lng = start[0] + (end[0] - start[0]) * segmentProgress;
+          vehicle.lat = start[1] + (end[1] - start[1]) * segmentProgress;
+
+          // Update marker position
+          if (vehicleMarkers[idx] && vehicleMarkers[idx].marker) {
+            vehicleMarkers[idx].marker.setLatLng([vehicle.lat, vehicle.lng]);
+
+            // Update trail if necessary
+            updateVehicleTrail(vehicle, idx);
+          }
+        } catch (err) {
+          console.error("Error updating vehicle position:", err);
+        }
+      }
+
+      // Update the vehicle's trail visualization
+      function updateVehicleTrail(vehicle, idx) {
+        try {
+          // Only add a new trail point occasionally to avoid too many points
+          if (Math.random() < 0.1) {
+            vehicle.trail.push({ lat: vehicle.lat, lng: vehicle.lng });
+            if (vehicle.trail.length > 5) vehicle.trail.shift();
+
+            // If we have enough points for a trail
+            if (vehicle.trail.length > 1) {
+              // Remove old trail
+              if (vehicleMarkers[idx].trail) {
+                map.removeLayer(vehicleMarkers[idx].trail);
+              }
+
+              // Create new trail
+              const trailPoints = vehicle.trail.map((p) => [p.lat, p.lng]);
+              trailPoints.push([vehicle.lat, vehicle.lng]);
+
+              vehicleMarkers[idx].trail = L.polyline(trailPoints, {
+                color: vehicle.color,
+                weight: 2,
+                opacity: 0.4,
+              }).addTo(map);
+            }
+          }
+        } catch (err) {
+          console.error("Error updating trail:", err);
+        }
+      }
+
+      // Move vehicle to the next edge in its route
+      function moveVehicleToNextEdge(vehicle, idx) {
+        try {
+          // If vehicle has a planned route, follow it
+          if (vehicle.plannedRoute && vehicle.plannedRoute.length > 0) {
+            // Increment route index
+            vehicle.routeIndex++;
+
+            // If we've reached the end of the planned route, plan a new route
+            if (vehicle.routeIndex >= vehicle.plannedRoute.length) {
+              vehicle.plannedRoute = planRoute(vehicle, 5);
+              vehicle.routeIndex = 0;
+            }
+
+            // Get the next edge from the route
+            if (vehicle.routeIndex < vehicle.plannedRoute.length) {
+              const nextEdgeIdx = vehicle.plannedRoute[vehicle.routeIndex];
+              const nextEdge = networkGraph.edges[nextEdgeIdx];
+
+              if (
+                nextEdge &&
+                nextEdge.feature &&
+                nextEdge.feature.geometry &&
+                nextEdge.feature.geometry.coordinates &&
+                nextEdge.feature.geometry.coordinates.length >= 2
+              ) {
+                // Add current position to trail
+                vehicle.trail.push({ lat: vehicle.lat, lng: vehicle.lng });
+                if (vehicle.trail.length > 5) vehicle.trail.shift();
+
+                // Switch to next edge
+                vehicle.currentEdge = nextEdgeIdx;
+                vehicle.pathIndex = 0;
+                vehicle.distanceTraveled = 0;
+                vehicle.currentSegmentLength = 0;
+
+                // Set position to start of new edge
+                const path = nextEdge.feature.geometry.coordinates;
+                vehicle.lng = path[0][0];
+                vehicle.lat = path[0][1];
+
+                return;
+              }
+            }
+          }
+
+          // If we get here, something went wrong with the route plan
+          // Choose a random edge
+          vehicle.currentEdge = Math.floor(
+            Math.random() * networkGraph.edges.length
+          );
+          vehicle.pathIndex = 0;
+          vehicle.distanceTraveled = 0;
+          vehicle.currentSegmentLength = 0;
+          vehicle.plannedRoute = [vehicle.currentEdge];
+          vehicle.routeIndex = 0;
+
+          const randomEdge = networkGraph.edges[vehicle.currentEdge];
+          if (
+            randomEdge &&
+            randomEdge.feature &&
+            randomEdge.feature.geometry &&
+            randomEdge.feature.geometry.coordinates &&
+            randomEdge.feature.geometry.coordinates.length >= 2
+          ) {
+            // Set position to start of new edge
+            const path = randomEdge.feature.geometry.coordinates;
+            vehicle.lng = path[0][0];
+            vehicle.lat = path[0][1];
+          }
+        } catch (err) {
+          console.error("Error moving vehicle to next edge:", err);
+
+          // Fallback: reset vehicle to a random position
+          try {
+            if (networkGraph && networkGraph.edges.length > 0) {
+              const randomEdgeIdx = Math.floor(
+                Math.random() * networkGraph.edges.length
+              );
+              const randomEdge = networkGraph.edges[randomEdgeIdx];
+              if (
+                randomEdge &&
+                randomEdge.feature &&
+                randomEdge.feature.geometry.coordinates
+              ) {
+                const path = randomEdge.feature.geometry.coordinates;
+                if (path && path.length >= 2) {
+                  vehicle.currentEdge = randomEdgeIdx;
+                  vehicle.pathIndex = 0;
+                  vehicle.distanceTraveled = 0;
+                  vehicle.currentSegmentLength = 0;
+                  vehicle.lng = path[0][0];
+                  vehicle.lat = path[0][1];
+                }
+              }
+            }
+          } catch (innerErr) {
+            console.error("Fallback error:", innerErr);
+          }
+        }
+      }
+
+      function startAnimation() {
+        log("Starting animation...");
+        simulationActive = true;
+        lastTimestamp = performance.now();
+
+        const animate = (timestamp) => {
+          try {
+            if (!simulationActive) return;
+            updateVehicles(timestamp);
+            animationFrameId = requestAnimationFrame(animate);
+          } catch (err) {
+            log("Animation error: " + err.message);
+            console.error("Animation error:", err);
+            // Don't stop animation on error, try to continue
+            animationFrameId = requestAnimationFrame(animate);
+          }
+        };
+
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      function stopAnimation() {
+        log("Stopping animation...");
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        simulationActive = false;
+      }
+
+      // UI Controls
+      document
+        .getElementById("vehicle-count")
+        .addEventListener("input", (e) => {
+          vehicleCount = parseInt(e.target.value);
+          document.getElementById("vehicle-display").textContent = vehicleCount;
+
+          // Reinitialize vehicles
+          if (networkGraph) {
+            initVehicles(vehicleCount);
+          }
+        });
+
+      document.getElementById("speed-factor").addEventListener("input", (e) => {
+        speedFactor = parseFloat(e.target.value);
+        document.getElementById("speed-display").textContent =
+          speedFactor + "x";
+      });
     </script>
   </body>
 </html>
