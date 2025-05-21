@@ -14,33 +14,30 @@ function App() {
 
   return (
     <div className="app-scroll-container">
-      <div className="topbar">
-        <h1 className="headline">Kempten Traffic Simulator</h1>
-        <p className="team-name">Team kemptAInability</p>
-      </div>
+      
+      
 
       <div className="map-section">
+        <div className="map-title">
+          <h1>Kempten City Traffic</h1>
+          <p>Team kemptAInability</p>
+        </div>
         <div className="map-overlay">
           <h2 className="headline2">Simulation Features</h2>
           <div className="tab-group vertical">
       
-            <button
-              onClick={() => handleClick('route')}
-              className={activeButton === 'route' ? 'tab active' : 'tab'}
-            >
-             🚗 ROUTE
-            </button>
+           
             <button
               onClick={() => handleClick('baum')}
               className={activeButton === 'baum' ? 'tab active' : 'tab'}
             >
-              🚧  BARRIOR
+              🚧  SET BARRIOR
             </button>
             <button
               onClick={() => handleClick('delete')}
               className={activeButton === 'delete' ? 'tab active' : 'tab'}
             >
-              ❌ DELETE 
+             ❌ DELETE BARRIOR
             </button>
           </div>
         </div>
@@ -51,7 +48,7 @@ function App() {
           <div className="impact-box">
             
             <div className="impact-content">
-              <p className="impact-label">🌱CO₂ Emissions</p>
+              <p className="impact-label">🌱 CO₂ Emissions</p>
               <div className="progress-bar">
                 <div className="progress-fill co2" style={{ width: '65%' }}></div>
               </div>
@@ -62,7 +59,7 @@ function App() {
           <div className="impact-box">
             
             <div className="impact-content">
-              <p className="impact-label"> 🔉Noise Reduction</p>
+              <p className="impact-label"> 🔉 Noise Reduction</p>
               <div className="progress-bar">
                 <div className="progress-fill noise" style={{ width: '50%' }}></div>
             </div>

@@ -7,12 +7,30 @@
   background: #f8f8f8;
 }
 
-/* Top-Bar mit h1 */
-.topbar {
-  text-align: center;
-  padding: 20px;
-  background: #f8f8f8;
+.map-title {
+  position: absolute;
+  top: 40px;        /* vorher 20px – nach unten verschieben */
+  left: 60px;       /* vorher 40px – weiter nach rechts */
+  z-index: 1001;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
+
+
+.map-title h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin: 0;
+  color:#0c7a06
+}
+
+.map-title p {
+  font-size: 1.2rem;
+  font-style: italic;
+  margin-top: 4px;
+  color:#0c7a06
+}
+
 
 .team-name {
   font-size: 1rem;
@@ -27,7 +45,7 @@
 /* Overlay auf der Karte */
 .map-overlay {
   position: absolute;
-  top: 180px;
+  top: 250px;      /* weiter nach unten */
   right: 1050px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
@@ -40,7 +58,7 @@
 
 .map-overlay-emissions {
   position: absolute;
-  top: 20px;
+  top: 40px;
   right: 20px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
@@ -60,11 +78,15 @@
 }
 
 .map-section {
-  height: 70vh;
-  width: calc(100vw - 140px);  /* Volle Breite minus 2×20px Abstand */
-  margin: 0 auto;              /* zentriert */
-  position: relative;         /* wichtig für Overlay */
+  height: calc(100vh - 100px);   /* Platz für Abstände oben/unten */
+  width: calc(100vw - 140px);    /* Seitenabstand */
+  margin: 40px auto 0 auto;      /* oben 40px, unten 0, horizontal auto */
+  position: relative;
 }
+
+
+
+
 
 #map {
   height: 100%;
