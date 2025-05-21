@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
-import MapComponent from './components/map';
+import TrafficNetwork from './components/map';
 import 'leaflet/dist/leaflet.css';
 
 function App() {
@@ -43,7 +43,7 @@ function App() {
       </div>
 
       <div className="map-wrapper">
-        <MapComponent activeButton={activeButton} />
+        <TrafficNetwork />
       </div>
     </div>
   );
