@@ -1,0 +1,14 @@
+.traffic-simulation {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+Ensure Leaflet map container takes full size
+ .traffic-map {
+  height: 100vh;
+  width: 100%;
+  z-index: 1;
+}
