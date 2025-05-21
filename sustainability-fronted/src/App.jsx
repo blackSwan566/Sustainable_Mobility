@@ -12,6 +12,8 @@ function App() {
     setActiveButton(action);
   };
 
+
+
   return (
     <div className="app-scroll-container">
       
@@ -25,19 +27,19 @@ function App() {
         <div className="map-overlay">
           <h2 className="headline2">Simulation Features</h2>
           <div className="tab-group vertical">
-      
+            
            
             <button
               onClick={() => handleClick('baum')}
               className={activeButton === 'baum' ? 'tab active' : 'tab'}
             >
-              🚧  SET BARRIOR
+              🚧  SET BARRIER
             </button>
             <button
               onClick={() => handleClick('delete')}
               className={activeButton === 'delete' ? 'tab active' : 'tab'}
             >
-             ❌ DELETE BARRIOR
+             ❌ DELETE BARRIER
             </button>
           </div>
         </div>
@@ -80,7 +82,10 @@ function App() {
           </div>
         </div>
 
-        <MapComponent activeButton={activeButton} />
+        
+          <MapComponent activeButton={activeButton} />
+        
+
       </div>
 
       <div className="about-section">

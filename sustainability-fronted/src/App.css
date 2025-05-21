@@ -1,15 +1,26 @@
-.app-scroll-container {
+/* Grundlayout */
+.app-container {
+  height: 100vh;
+  width: 100vw;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  max-height: 100vh;
-  width: 100vw;
-  background: #f8f8f8;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f6fa;
+  margin: 0;
 }
+.app-scroll-container {
+  height: 100vh;
+  width: 100vw;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  background-color: #ffffff;
+}
+
 
 .map-title {
   position: absolute;
-  top: 40px;        /* vorher 20px – nach unten verschieben */
+  top: 60px;        /* vorher 20px – nach unten verschieben */
   left: 60px;       /* vorher 40px – weiter nach rechts */
   z-index: 1001;
   color: white;
@@ -45,8 +56,8 @@
 /* Overlay auf der Karte */
 .map-overlay {
   position: absolute;
-  top: 250px;      /* weiter nach unten */
-  right: 1050px;
+  top: 180px;      /* weiter nach unten */
+  right: 1080px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -58,7 +69,7 @@
 
 .map-overlay-emissions {
   position: absolute;
-  top: 40px;
+  top: 180px;
   right: 20px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
@@ -78,46 +89,63 @@
 }
 
 .map-section {
-  height: calc(100vh - 100px);   /* Platz für Abstände oben/unten */
-  width: calc(100vw - 140px);    /* Seitenabstand */
-  margin: 40px auto 0 auto;      /* oben 40px, unten 0, horizontal auto */
+  height: calc(90vh - 0px);
+  width: calc(100vw - 70px);
   position: relative;
+  scroll-snap-align: start;
+  background-color: #ffffff;
+  padding-bottom: 20px; 
+   margin: 0 auto;
+  padding-top: 50px;
+  display: flex;
+  align-items: center;      /* vertikal */
+  justify-content: center;
 }
-
-
-
 
 
 #map {
+  max-height: 750px;
   height: 100%;
-  width: 100%;                 /* passt sich map-section an */
+  width: 100%;
+
+  margin: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 0px;
+  border-radius: 8px;
 }
 
 
-/* Headline */
+
 .headline {
   font-size: 3.5rem;
+  color: #19b629;
+  margin-bottom: 40px;
   font-family: 'Poppins', sans-serif;
+  /* Modern, klar lesbar */
   font-weight: 700;
-  color: #31b671;
+  color: #19520c;
+  /* ein kräftiges Dunkelblau */
   text-shadow: 2px 2px 10px rgba(71, 70, 70, 0.3);
-  background: linear-gradient(90deg, #199f19, #0c7a06);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 10px;
-}
-
-.headline2 {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #199f29, #0c7a06);
+  background: linear-gradient(90deg, #1a5c08, #087b0a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+.headline2  { 
+  color: #19520c;
+  font-size: 1.0rem;
+   font-family: 'Poppins', sans-serif;
+  /* Modern, klar lesbar */
+  font-weight: 700;
+  
+}
 /* Tabs */
+.tab-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
 .tab {
   background-color: #dcefdc;
   border: none;
@@ -135,9 +163,9 @@
 }
 
 .tab.active {
-  background-color: #12892b;
+  background-color: #319c21;
   color: white;
-  box-shadow: 0 2px 8px rgba(26, 108, 40, 0.4);
+  box-shadow: 0 2px 8px rgba(26, 42, 108, 0.4);
 }
 
 /* About Us */
@@ -145,6 +173,8 @@
   background-color: #ffffff;
   padding: 40px 20px;
   text-align: center;
+  scroll-snap-align: start;
+  height: 100vh;
 
 }
 
