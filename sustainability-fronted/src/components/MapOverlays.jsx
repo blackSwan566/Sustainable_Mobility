@@ -72,3 +72,37 @@ export const MapTitle = () => {
     </div>
   );
 };
+
+export const LayerControls = ({ activeLayer, setActiveLayer }) => {
+  return (
+    <div className="map-overlay-layers">
+      <h2 className="headline2">Map Layers</h2>
+      <div className="layer-toggles">
+        <button
+          className={`tab ${activeLayer === "traffic" ? "active" : ""}`}
+          onClick={() => setActiveLayer("traffic")}
+        >
+          🚗 Traffic Flow
+        </button>
+        <button
+          className={`tab ${activeLayer === "jam" ? "active" : ""}`}
+          onClick={() => setActiveLayer("jam")}
+        >
+          ⏱️ Traffic Jams
+        </button>
+        <button
+          className={`tab ${activeLayer === "co2" ? "active" : ""}`}
+          onClick={() => setActiveLayer("co2")}
+        >
+          🌱 CO₂ Emissions
+        </button>
+        <button
+          className={`tab ${activeLayer === "noise" ? "active" : ""}`}
+          onClick={() => setActiveLayer("noise")}
+        >
+          🔊 Noise Levels
+        </button>
+      </div>
+    </div>
+  );
+};

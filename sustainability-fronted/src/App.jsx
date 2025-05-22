@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import Map from "./components/Map";
 import ControlPanel from "./components/ControlPanel";
 import StreetInfoPanel from "./components/StreetInfoPanel";
+
 import "./App.css";
 
 const TrafficNetwork = () => {
@@ -14,6 +15,7 @@ const TrafficNetwork = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [selectedStreetInfo, setSelectedStreetInfo] = useState(null);
   const mapRef = useRef(null);
+  const [activeLayer, setActiveLayer] = useState("traffic");
 
   React.useEffect(() => {
     speedFactorRef.current = speedFactor;
@@ -25,8 +27,9 @@ const TrafficNetwork = () => {
   }, [selectedStreetInfo]);
 
   return (
-    <div className="app-container">
+    <div className="app">
       <Map
+        ref={mapRef}
         vehicleCount={vehicleCount}
         speedFactor={speedFactor}
         activeButton={activeButton}
@@ -36,7 +39,7 @@ const TrafficNetwork = () => {
         barrier={barrier}
         isPlaying={isPlaying}
         setSelectedStreetInfo={setSelectedStreetInfo}
-        ref={mapRef}
+        activeLayer={activeLayer}
       />
       <ControlPanel
         vehicleCount={vehicleCount}
@@ -50,6 +53,8 @@ const TrafficNetwork = () => {
         mapRef={mapRef}
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}
+        activeLayer={activeLayer}
+        setActiveLayer={setActiveLayer}
       />
       {selectedStreetInfo && (
         <StreetInfoPanel streetInfo={selectedStreetInfo} />

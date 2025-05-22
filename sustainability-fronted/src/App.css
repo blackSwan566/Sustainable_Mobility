@@ -1,22 +1,78 @@
-/* Grundlayout */
-.app-container {
+/* Reset body and html to prevent scrolling */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* App container */
+.app {
   height: 100vh;
   width: 100vw;
   display: flex;
-  flex-direction: column;
-  font-family: "Segoe UI", sans-serif;
-  background-color: #f4f6fa;
-  margin: 0;
   position: relative;
   overflow: hidden;
+  font-family: "Segoe UI", sans-serif;
+  background-color: #f4f6fa;
 }
+
+/* Map container */
+div[ref="mapRef"] {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Keep the control panel scrollable but not the whole page */
+.control-panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 320px;
+  max-height: calc(100vh - 40px);
+  z-index: 2000;
+  border-radius: 16px;
+  overflow: hidden; /* Hide overflow outside the panel */
+}
+
+.control-panel-content {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* Remove any app-scroll-container styles that might be causing scrolling */
 .app-scroll-container {
-  height: 100vh;
-  width: 100vw;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
-  background-color: #ffffff;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure map section doesn't cause scrolling */
+.map-section {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 .map-title {
@@ -85,22 +141,6 @@
   flex-direction: column;
   gap: 10px;
   margin-top: 10px;
-}
-
-.map-section {
-  height: calc(85vh - 0px);
-  width: 95vw; /* Breiter als vorher */
-  margin-left: auto;
-  margin-right: auto;
-  position: relative;
-  scroll-snap-align: start;
-  background-color: #ffffff;
-  padding-bottom: 20px;
-  padding-top: 50px;
-  padding-right: -170px;
-  display: flex;
-  align-items: center; /* vertikal */
-  justify-content: center;
 }
 
 #map {
@@ -382,11 +422,8 @@
   width: 320px;
   max-height: calc(100vh - 40px);
   z-index: 2000;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  padding-right: 5px; /* Add some padding for the scrollbar */
+  border-radius: 16px;
+  overflow: hidden; /* Hide overflow outside the panel */
 }
 
 .control-panel-content {
@@ -399,6 +436,25 @@
   color: #333;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* Scrollbar styling */
+.control-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.control-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.control-panel-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }
 
 .control-section {
@@ -594,20 +650,6 @@
   height: 20px;
   width: auto;
   opacity: 0.8;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
 }
 
 /* Playback controls */

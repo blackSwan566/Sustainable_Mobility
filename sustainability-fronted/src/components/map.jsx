@@ -16,6 +16,22 @@ const barrierIcon = L.icon({
   iconAnchor: [16, 32],
 });
 
+const getTrafficColor = () => "#3388ff";
+
+const getJamColor = (density) => {
+  if (density > 5) return "#b30000"; // heavy jam – dark red
+  if (density > 2) return "#e34a33"; // moderate jam – mid red
+  if (density > 0) return "#fc8d59"; // light congestion – light red / peach
+  return "#ffb69e"; // free flow – very light
+};
+
+const getCo2Color = (intensity) => {
+  // green (good) → yellow → orange (bad)
+  if (intensity > 0.7) return "#ffa000"; // orange – worst
+  if (intensity > 0.4) return "#ffd54f"; // yellow – medium
+  return "#00c853"; // green – good
+};
+
 const Map = forwardRef(
   (
     {
@@ -26,6 +42,7 @@ const Map = forwardRef(
       barrier,
       isPlaying,
       setSelectedStreetInfo,
+      activeLayer,
     },
     ref
   ) => {
@@ -40,6 +57,7 @@ const Map = forwardRef(
     const streetLayersRef = useRef({});
     const highlightedLayerRef = useRef(null);
     const [hoveredFeature, setHoveredFeature] = useState(null);
+    const activeLayerRef = useRef(activeLayer);
 
     // Expose functions to parent component via ref
     useImperativeHandle(ref, () => ({
@@ -69,7 +87,7 @@ const Map = forwardRef(
       // Highlight the hovered feature
       highlightedLayerRef.current = L.geoJSON(feature, {
         style: {
-          color: "#FFCC00", // Brighter yellow
+          color: "#0000ff", // Brighter yellow
           weight: 8, // Increased thickness
           opacity: 0.9, // More opaque
           lineJoin: "round",
@@ -532,12 +550,12 @@ const Map = forwardRef(
 
           // Update the edge type colors to use shades of gray
           const edgeTypeColors = {
-            "highway.primary": "#555555",
-            "highway.secondary": "#666666",
-            "highway.tertiary": "#777777",
-            "highway.residential": "#888888",
-            "highway.service": "#999999",
-            default: "#aaaaaa",
+            "highway.primary": "#55555570",
+            "highway.secondary": "#66666670",
+            "highway.tertiary": "#77777770",
+            "highway.residential": "#88888870",
+            "highway.service": "#99999970",
+            default: "#aaaaaa70",
           };
 
           const getColor = (f) =>
@@ -592,7 +610,9 @@ const Map = forwardRef(
           // Initialize vehicles with the vehicle layer
           initVehicles(map, vehicleCount, vehiclesLayer);
 
-          heatLayersRef.current = {
+          // Create the layers but don't add the effect here
+          const layers = {
+            traffic: vehiclesLayer,
             jam: L.heatLayer([], {
               radius: 20,
               maxZoom: 19,
@@ -610,20 +630,7 @@ const Map = forwardRef(
             }),
           };
 
-          // Move layer controls to bottom right with proper overlays
-          L.control
-            .layers(
-              null,
-              {
-                Streets: streetsLayer,
-                Vehicles: vehiclesLayer,
-                "Traffic jam": heatLayersRef.current.jam,
-                "CO₂": heatLayersRef.current.co2,
-                "Noise [dB]": heatLayersRef.current.noise,
-              },
-              { position: "bottomright" }
-            )
-            .addTo(map);
+          heatLayersRef.current = layers;
         });
 
       return () => {
@@ -871,6 +878,9 @@ const Map = forwardRef(
       const graph = networkGraphRef.current;
       if (!graph || !graph.edges || !vehiclesRef.current) return;
 
+      // Track vehicle positions for density calculation
+      const vehiclePositions = [];
+
       vehiclesRef.current.forEach((v, idx) => {
         // Skip updating if the vehicle is on a blocked edge
         if (!v) return;
@@ -963,7 +973,79 @@ const Map = forwardRef(
         if (marker) {
           marker.setLatLng([v.lat, v.lng]);
         }
+
+        // Add vehicle position to tracking array
+        vehiclePositions.push([v.lat, v.lng, v]);
       });
+
+      // Calculate traffic density and update vehicle colors and heatmaps
+      updateTrafficVisualization(vehiclePositions);
+    };
+
+    // New comprehensive function to handle all visualizations
+    const updateTrafficVisualization = (vehiclePositions) => {
+      const map = mapRef.current?._leaflet_map;
+      if (!map) return;
+
+      const noiseData = [];
+
+      vehiclePositions.forEach(([lat, lng, vehicle], idx) => {
+        const marker = vehicleMarkersRef.current[idx]?.marker;
+        if (!marker) return;
+
+        let nearbyCount = 0;
+        vehiclePositions.forEach(([otherLat, otherLng], jdx) => {
+          if (idx === jdx) return;
+          const dist = map.distance([lat, lng], [otherLat, otherLng]);
+          if (dist < 50) nearbyCount++;
+        });
+        vehicle.trafficDensity = nearbyCount;
+
+        const currentLayer = activeLayerRef.current;
+        let colour = "#3388ff";
+
+        switch (currentLayer) {
+          case "traffic":
+            colour = getTrafficColor();
+            break;
+          case "jam":
+            colour = getJamColor(nearbyCount);
+            break;
+          case "co2": {
+            const intensity = Math.min(1.0, nearbyCount * 0.15 + 0.1);
+            colour = getCo2Color(intensity);
+            break;
+          }
+          case "noise":
+            marker.setStyle({
+              fillOpacity: 0,
+              opacity: 0,
+            });
+            const edge = networkGraphRef.current?.edges[vehicle.currentEdge];
+            const speed = edge?.speedKmh || 50;
+            const noiseIntensity = speed > 80 ? 1 : speed > 50 ? 0.7 : 0.4;
+            noiseData.push([lat, lng, noiseIntensity]);
+            return;
+          default:
+            colour = getTrafficColor();
+        }
+
+        marker.setStyle({
+          fillColor: colour,
+          color: colour,
+          fillOpacity: 1,
+          opacity: 1,
+        });
+      });
+
+      const noiseLayer = heatLayersRef.current.noise;
+      const mapHasLayer = noiseLayer && map.hasLayer(noiseLayer);
+      if (activeLayerRef.current === "noise") {
+        if (!mapHasLayer && noiseLayer) map.addLayer(noiseLayer);
+        if (noiseLayer && noiseData.length) noiseLayer.setLatLngs(noiseData);
+      } else if (mapHasLayer) {
+        map.removeLayer(noiseLayer);
+      }
     };
 
     const startAnimation = () => {
@@ -1013,6 +1095,157 @@ const Map = forwardRef(
 
       return edgeIdx;
     };
+
+    // Move the layer change effect outside the fetch callback
+    useEffect(() => {
+      const map = mapRef.current?._leaflet_map;
+      if (!map) return;
+
+      // Remove all visualization layers
+      Object.values(heatLayersRef.current).forEach((layer) => {
+        if (map.hasLayer(layer)) {
+          map.removeLayer(layer);
+        }
+      });
+
+      // Update vehicle colors based on active layer
+      vehiclesRef.current?.forEach((vehicle, idx) => {
+        const marker = vehicleMarkersRef.current[idx]?.marker;
+        if (!marker) return;
+
+        let color;
+        let nearbyCount, edge, speed;
+
+        switch (activeLayer) {
+          case "traffic":
+            color = "#3388ff";
+            break;
+
+          case "jam":
+            nearbyCount = vehicle.trafficDensity || 0;
+            if (nearbyCount > 5) {
+              color = "#ff0000";
+            } else if (nearbyCount > 2) {
+              color = "#ffaa00";
+            } else {
+              color = "#3388ff";
+            }
+            break;
+
+          case "co2":
+            edge = networkGraphRef.current?.edges[vehicle.currentEdge];
+            speed = edge?.speedKmh || 50;
+            if (speed < 30) {
+              color = "#ff6600";
+            } else if (speed < 50) {
+              color = "#ffcc00";
+            } else {
+              color = "#66cc00";
+            }
+            break;
+
+          case "noise":
+            marker.setStyle({
+              fillOpacity: 0,
+              opacity: 0,
+            });
+            return;
+
+          default:
+            color = "#3388ff";
+        }
+
+        marker.setStyle({
+          fillColor: color,
+          color: color,
+          fillOpacity: 1,
+          opacity: 1,
+        });
+      });
+
+      if (activeLayer === "noise" && heatLayersRef.current.noise) {
+        map.addLayer(heatLayersRef.current.noise);
+      }
+    }, [activeLayer]);
+
+    // Add noise update interval effect
+    useEffect(() => {
+      let interval;
+
+      if (activeLayer === "noise") {
+        interval = setInterval(() => {
+          const noiseData =
+            vehiclesRef.current
+              ?.map((vehicle) => {
+                const edge =
+                  networkGraphRef.current?.edges[vehicle.currentEdge];
+                const speed = edge?.speedKmh || 50;
+                // Calculate intensity based on speed
+                const intensity = speed > 80 ? 1.0 : speed > 50 ? 0.7 : 0.4;
+                return [vehicle.lat, vehicle.lng, intensity];
+              })
+              .filter(Boolean) || [];
+
+          if (heatLayersRef.current.noise) {
+            heatLayersRef.current.noise.setLatLngs(noiseData);
+          }
+        }, 5000);
+      }
+
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }, [activeLayer]);
+
+    // Delete barrier effect
+    useEffect(() => {
+      const map = mapRef.current?._leaflet_map;
+      if (!map) return;
+
+      if (activeButton === "delete") {
+        handleDeleteBarrier();
+      }
+    }, [activeButton]);
+
+    // Define the handleDeleteBarrier function inside the component
+    const handleDeleteBarrier = () => {
+      const map = mapRef.current?._leaflet_map;
+      if (!map) return;
+
+      // Remove all barrier markers
+      barrier.current.forEach(({ marker }) => {
+        if (marker) {
+          map.removeLayer(marker);
+        }
+      });
+
+      // Reopen all blocked streets
+      if (networkGraphRef.current && networkGraphRef.current.edges) {
+        networkGraphRef.current.edges.forEach((edge) => {
+          edge.isBlocked = false;
+        });
+      }
+
+      // Clear the barrier array
+      barrier.current = [];
+
+      // Update street layers to show reopened streets
+      if (streetLayersRef.current && streetLayersRef.current.streets) {
+        streetLayersRef.current.streets.setStyle((feature) => {
+          return {
+            color: "#3388ff",
+            weight: 3,
+            opacity: 0.7,
+          };
+        });
+      }
+
+      console.log("All barriers removed and streets reopened");
+    };
+
+    useEffect(() => {
+      activeLayerRef.current = activeLayer;
+    }, [activeLayer]);
 
     return (
       <div

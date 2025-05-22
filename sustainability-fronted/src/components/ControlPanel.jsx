@@ -12,6 +12,8 @@ const ControlPanel = ({
   mapRef,
   isPlaying,
   setIsPlaying,
+  activeLayer,
+  setActiveLayer,
 }) => {
   // Function to cycle through speed multipliers
   const cycleSpeedMultiplier = () => {
@@ -80,6 +82,44 @@ const ControlPanel = ({
         </div>
 
         <div className="control-section">
+          <h3>Map Layers</h3>
+          <div className="button-group">
+            <button
+              className={`control-button ${
+                activeLayer === "traffic" ? "active" : ""
+              }`}
+              onClick={() => setActiveLayer("traffic")}
+            >
+              🚗 Traffic Flow
+            </button>
+            <button
+              className={`control-button ${
+                activeLayer === "jam" ? "active" : ""
+              }`}
+              onClick={() => setActiveLayer("jam")}
+            >
+              ⏱️ Traffic Jams
+            </button>
+            <button
+              className={`control-button ${
+                activeLayer === "co2" ? "active" : ""
+              }`}
+              onClick={() => setActiveLayer("co2")}
+            >
+              🌱 CO₂ Emissions
+            </button>
+            <button
+              className={`control-button ${
+                activeLayer === "noise" ? "active" : ""
+              }`}
+              onClick={() => setActiveLayer("noise")}
+            >
+              🔊 Noise Levels
+            </button>
+          </div>
+        </div>
+
+        <div className="control-section">
           <h3>Simulation Features</h3>
           <div className="button-group">
             {activeButton === "barrier" ? (
@@ -108,48 +148,6 @@ const ControlPanel = ({
             >
               ❌ Delete Barriers
             </button>
-          </div>
-        </div>
-
-        <div className="control-section">
-          <h3>Impact Analysis</h3>
-          <div className="impact-box">
-            <div className="impact-content">
-              <p className="impact-label">🌱 CO₂ Emissions</p>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill co2"
-                  style={{ width: "65%" }}
-                ></div>
-              </div>
-              <p className="impact-value">−65%</p>
-            </div>
-          </div>
-
-          <div className="impact-box">
-            <div className="impact-content">
-              <p className="impact-label">🔉 Noise Reduction</p>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill noise"
-                  style={{ width: "50%" }}
-                ></div>
-              </div>
-              <p className="impact-value">−50%</p>
-            </div>
-          </div>
-
-          <div className="impact-box">
-            <div className="impact-content">
-              <p className="impact-label">🚗⏳ Traffic Delay</p>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill traffic"
-                  style={{ width: "70%" }}
-                ></div>
-              </div>
-              <p className="impact-value">−70%</p>
-            </div>
           </div>
         </div>
 
