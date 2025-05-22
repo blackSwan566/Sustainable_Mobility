@@ -40,7 +40,7 @@ const StreetInfoPanel = ({ streetInfo }) => {
     isBarriered,
   } = streetInfo;
 
-  // Convert maxSpeed from m/s to km/h if it exists
+  // Speed should already be in km/h from the GeoJSON data
   const speedKmh = maxSpeed ? Math.round(maxSpeed) : null;
 
   // Filter relevant vehicle types to show
@@ -53,7 +53,7 @@ const StreetInfoPanel = ({ streetInfo }) => {
     "pedestrian",
     "motorcycle",
     "taxi",
-  ].filter((v) => allowed.includes(v));
+  ].filter((v) => allowed && allowed.includes(v));
 
   return (
     <div className="street-info-panel">
@@ -97,7 +97,7 @@ const StreetInfoPanel = ({ streetInfo }) => {
           </div>
         )}
 
-        {relevantVehicles.length > 0 && (
+        {relevantVehicles && relevantVehicles.length > 0 && (
           <div className="street-info-row vehicle-types">
             <span className="info-label">Erlaubte Fahrzeuge:</span>
             <div className="vehicle-icons">

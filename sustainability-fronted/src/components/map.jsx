@@ -90,12 +90,9 @@ const Map = forwardRef(
             feature.properties.name ||
             "Unnamed Street",
           type: feature.properties.edge_type || "Unknown",
-          maxSpeed:
-            feature.properties.maxSpeed ||
-            feature.properties.speed_kmh ||
-            (feature.properties.speed
-              ? Math.round(feature.properties.speed * 3.6)
-              : undefined),
+          maxSpeed: feature.properties.speed_kmh
+            ? parseFloat(feature.properties.speed_kmh)
+            : undefined,
           length: calculatePathLength(feature.geometry.coordinates).toFixed(0),
           allowed: feature.properties.allowed
             ? feature.properties.allowed.split(",")
@@ -179,6 +176,7 @@ const Map = forwardRef(
             // Find closest point on the street to the click
             let minDist = Infinity;
             let closestPoint = null;
+            let closestSegmentIndex = 0;
 
             // Calculate closest point on line segments (more accurate than just points)
             for (let i = 0; i < coords.length - 1; i++) {
@@ -194,6 +192,7 @@ const Map = forwardRef(
                 if (dist < minDist) {
                   minDist = dist;
                   closestPoint = v;
+                  closestSegmentIndex = i;
                 }
                 continue;
               }
@@ -215,6 +214,7 @@ const Map = forwardRef(
               if (dist < minDist) {
                 minDist = dist;
                 closestPoint = projection;
+                closestSegmentIndex = i;
                 console.log(
                   `New closest point: ${projection.lat.toFixed(
                     5
@@ -230,11 +230,64 @@ const Map = forwardRef(
               const streetName =
                 hoveredFeature.properties.name || "Unnamed Street";
 
+              // Get edge ID from the feature to block this specific segment in the network graph
+              const edgeId = hoveredFeature.id;
+
+              // Ensure this edge exists in the network graph
+              if (networkGraphRef.current && networkGraphRef.current.edges) {
+                // Find all edges that match this feature
+                const edgesToBlock = [];
+
+                // grab the node-IDs of the clicked edge once
+                const clickedStart =
+                  hoveredFeature.geometry.coordinates[0].join(",");
+                const clickedEnd = hoveredFeature.geometry.coordinates
+                  .at(-1)
+                  .join(",");
+
+                networkGraphRef.current.edges.forEach((edge, idx) => {
+                  // block A→B OR B→A that matches the same geometry
+                  const sameSegment =
+                    (edge.start === clickedStart && edge.end === clickedEnd) ||
+                    (edge.start === clickedEnd && edge.end === clickedStart);
+
+                  if (sameSegment) {
+                    edge.isBlocked = true;
+                    edgesToBlock.push(idx);
+                  }
+                });
+
+                console.log(
+                  `Found ${edgesToBlock.length} edges to block with ID ${edgeId}`
+                );
+
+                // Block all matching edges
+                edgesToBlock.forEach((idx) => {
+                  networkGraphRef.current.edges[idx].isBlocked = true;
+                  console.log(`Blocked edge ${idx} for street ${streetName}`);
+                });
+              }
+
+              // Also update the visual appearance of the blocked segment
+              const streetLayers = streetLayersRef.current[streetName] || [];
+              const blockedLayer = streetLayers.find(
+                (layer) => layer.feature?.id === edgeId
+              );
+
+              if (blockedLayer) {
+                blockedLayer.setStyle({
+                  color: "#ff0000",
+                  weight: 5,
+                  opacity: 1,
+                });
+              }
+
               barrier.current.push({
                 marker,
                 trail: null,
-                streetId: hoveredFeature.id,
+                streetId: edgeId,
                 streetName: streetName,
+                segmentIndex: closestSegmentIndex,
               });
 
               console.log(
@@ -242,7 +295,43 @@ const Map = forwardRef(
                   5
                 )}, ${closestPoint.lng.toFixed(5)}`
               );
-              alert(`Barrier placed on ${streetName}`);
+
+              // Stop all existing vehicles
+              if (animationRef.current) {
+                stopAnimation();
+              }
+
+              // Find a layer group for vehicles
+              const vehiclesLayer = Object.values(map._layers).find(
+                (layer) => layer.vehicleCount !== undefined
+              );
+
+              // Reinitialize all vehicles to ensure they respect the new barriers
+              const currentVehicleCount = vehiclesRef.current.length;
+              console.log(
+                `Reinitializing ${currentVehicleCount} vehicles after barrier placement`
+              );
+
+              // Clear all current vehicles
+              vehicleMarkersRef.current.forEach((v) => {
+                if (v.marker) map.removeLayer(v.marker);
+                if (v.trail) map.removeLayer(v.trail);
+              });
+
+              // Initialize new vehicles that respect barriers
+              initVehicles(map, currentVehicleCount, vehiclesLayer);
+
+              // Restart animation if it was running
+              if (isPlaying) {
+                startAnimation();
+              }
+
+              alert(`Barrier placed on ${streetName} - Traffic blocked`);
+
+              // Update street info if this is the currently hovered street
+              if (hoveredFeature === hoveredFeature) {
+                handleStreetHover(hoveredFeature);
+              }
             }
           } else {
             // If not hovering over a street, place barrier at click location
@@ -572,16 +661,26 @@ const Map = forwardRef(
           };
         }
 
+        // Get speed in km/h from the feature properties
+        const speedKmh = feature.properties.speed_kmh
+          ? parseFloat(feature.properties.speed_kmh)
+          : 50; // Default to 50 km/h if not specified
+
         graph.edges.push({
           id: idx,
           start: startCoord,
           end: endCoord,
           feature: feature,
           length: calculatePathLength(coords),
+          isBlocked: false, // Initially, no segment is blocked
+          speedKmh: speedKmh, // Store speed in km/h
         });
 
         graph.nodes[startCoord].connections.push(endCoord);
       });
+
+      // Build adjacency list for path finding
+      buildAdjacency(graph);
 
       networkGraphRef.current = graph;
     };
@@ -595,6 +694,65 @@ const Map = forwardRef(
       }
       return Math.max(length, 1);
     };
+
+    // ---------- Path-finding helpers ----------
+    const buildAdjacency = (graph) => {
+      graph.adj = {};
+      graph.edges.forEach((edge, idx) => {
+        if (!graph.adj[edge.start]) graph.adj[edge.start] = [];
+        graph.adj[edge.start].push({ idx, to: edge.end, weight: edge.length });
+      });
+    };
+
+    const dijkstra = (graph, startNode, endNode) => {
+      if (startNode === endNode) return [];
+      const dist = {};
+      const prevEdge = {};
+      const pq = [[0, startNode]]; // [distance, node]
+
+      while (pq.length) {
+        pq.sort((a, b) => a[0] - b[0]); // naïve priority-queue
+        const [d, u] = pq.shift();
+        if (dist[u] !== undefined) continue;
+        dist[u] = d;
+        if (u === endNode) break;
+
+        (graph.adj[u] || []).forEach(({ idx, to, weight }) => {
+          if (graph.edges[idx].isBlocked) return; // skip blocked links
+          if (dist[to] === undefined) {
+            pq.push([d + weight, to]);
+            if (prevEdge[to] === undefined) prevEdge[to] = idx;
+          }
+        });
+      }
+
+      if (dist[endNode] === undefined) return []; // no path
+
+      // Re-construct edge-index path
+      const path = [];
+      let node = endNode;
+      while (node !== startNode) {
+        const edgeIdx = prevEdge[node];
+        if (edgeIdx === undefined) return [];
+        path.unshift(edgeIdx);
+        node = graph.edges[edgeIdx].start;
+      }
+      return path;
+    };
+
+    const getRandomRoute = (graph) => {
+      const nodes = Object.keys(graph.nodes);
+      if (nodes.length < 2) return [];
+      for (let tries = 0; tries < 30; tries++) {
+        const start = nodes[Math.floor(Math.random() * nodes.length)];
+        let end = nodes[Math.floor(Math.random() * nodes.length)];
+        if (end === start) continue;
+        const route = dijkstra(graph, start, end);
+        if (route.length) return route;
+      }
+      return [];
+    };
+    // ---------- end helpers ----------
 
     const createPathVisualizationLayer = (map) => {
       const layer = L.layerGroup();
@@ -659,30 +817,20 @@ const Map = forwardRef(
       const vehicleColor = "#3388ff"; // Standard blue color
 
       for (let i = 0; i < count; i++) {
-        const edgeIdx = Math.floor(Math.random() * graph.edges.length);
+        const route = getRandomRoute(graph);
+        if (!route.length) continue; // couldn't find a path
+
+        const edgeIdx = route[0];
         const edge = graph.edges[edgeIdx];
-        if (
-          !edge ||
-          !edge.feature ||
-          !edge.feature.geometry ||
-          !edge.feature.geometry.coordinates
-        )
-          continue;
-
         const coords = edge.feature.geometry.coordinates;
-        if (coords.length < 2) continue;
+        if (!coords || coords.length < 2) continue;
 
-        const progress = Math.random();
+        const progress = Math.random() * 0.5; // appear somewhere in first half
         const segment = Math.floor(progress * (coords.length - 1));
         const sub = progress * (coords.length - 1) - segment;
 
-        if (segment < 0 || segment + 1 >= coords.length) continue;
-
         const start = coords[segment];
         const end = coords[segment + 1];
-
-        if (!start || !end) continue;
-
         const lng = start[0] + (end[0] - start[0]) * sub;
         const lat = start[1] + (end[1] - start[1]) * sub;
 
@@ -695,6 +843,8 @@ const Map = forwardRef(
           speed: 10 + Math.random() * 10,
           color: vehicleColor,
           trail: [],
+          route, // ← new
+          routePos: 0, // ← new
         };
 
         const marker = L.circleMarker([lat, lng], {
@@ -706,45 +856,49 @@ const Map = forwardRef(
           fillOpacity: 0.8,
         });
 
-        // Add to layer group if provided, otherwise add directly to map
-        if (layerGroup) {
-          marker.addTo(layerGroup);
-        } else {
-          marker.addTo(map);
-        }
+        (layerGroup || map).addLayer(marker);
 
         vehicleMarkersRef.current.push({ marker, trail: null });
         vehiclesRef.current.push(vehicle);
       }
+
+      console.log(
+        `Successfully initialized ${vehiclesRef.current.length} vehicles`
+      );
     };
 
     const updateVehicles = (delta) => {
       const graph = networkGraphRef.current;
       if (!graph || !graph.edges || !vehiclesRef.current) return;
 
-      // Use a consistent color for all vehicles
-      const vehicleColor = "#3388ff"; // Standard blue color
-
       vehiclesRef.current.forEach((v, idx) => {
-        if (!v || !graph.edges[v.currentEdge]) {
-          // Reset vehicle if it's in an invalid state
-          const newEdgeIdx = Math.floor(Math.random() * graph.edges.length);
+        // Skip updating if the vehicle is on a blocked edge
+        if (!v) return;
+
+        // If vehicle is on a blocked edge, relocate it
+        if (
+          !graph.edges[v.currentEdge] ||
+          graph.edges[v.currentEdge].isBlocked
+        ) {
+          console.log(
+            `Vehicle ${idx} on blocked edge ${v.currentEdge}, relocating`
+          );
+          const newEdgeIdx = findRandomUnblockedEdge();
           const edge = graph.edges[newEdgeIdx];
           const coords = edge.feature.geometry.coordinates;
 
-          if (!coords || coords.length < 2) return;
+          if (coords && coords.length >= 2) {
+            v.currentEdge = newEdgeIdx;
+            v.progress = 0;
+            v.lng = coords[0][0];
+            v.lat = coords[0][1];
 
-          v = {
-            id: idx,
-            lng: coords[0][0],
-            lat: coords[0][1],
-            currentEdge: newEdgeIdx,
-            progress: 0,
-            speed: 10 + Math.random() * 10,
-            color: vehicleColor,
-            trail: [],
-          };
-          vehiclesRef.current[idx] = v;
+            const marker = vehicleMarkersRef.current[idx]?.marker;
+            if (marker) {
+              marker.setLatLng([v.lat, v.lng]);
+            }
+          }
+          return; // Skip the rest of the update for this vehicle
         }
 
         const edge = graph.edges[v.currentEdge];
@@ -752,31 +906,41 @@ const Map = forwardRef(
 
         if (!coords || coords.length < 2) return;
 
+        // Use the speedKmh from the edge, converted to m/s for internal calculations
+        const speedMs = (edge.speedKmh || 50) / 3.6; // Convert km/h to m/s
+
         v.progress +=
-          (v.speed * speedFactorRef.current * delta) / 1000 / edge.length;
+          (speedMs * speedFactorRef.current * delta) / 1000 / edge.length;
 
         if (v.progress >= 1) {
           v.trail.push({ lat: v.lat, lng: v.lng });
           if (v.trail.length > 5) v.trail.shift();
 
-          const end = edge.end;
-          const connections = graph.nodes[end]?.connections || [];
-
-          if (!connections.length) {
-            v.currentEdge = Math.floor(Math.random() * graph.edges.length);
-          } else {
-            const next =
-              connections[Math.floor(Math.random() * connections.length)];
-            const nextIdx = graph.edges.findIndex(
-              (e) => e.start === end && e.end === next
-            );
-            v.currentEdge =
-              nextIdx !== -1
-                ? nextIdx
-                : Math.floor(Math.random() * graph.edges.length);
+          // -------- route following ----------
+          v.routePos++;
+          if (!v.route || v.routePos >= v.route.length) {
+            // destination reached -> choose a new one
+            v.route = getRandomRoute(graph);
+            v.routePos = 0;
           }
-
+          if (!v.route.length) {
+            v.currentEdge = findRandomUnblockedEdge();
+          } else {
+            // skip freshly-blocked edges
+            while (
+              v.routePos < v.route.length &&
+              graph.edges[v.route[v.routePos]].isBlocked
+            ) {
+              v.routePos++;
+            }
+            if (v.routePos >= v.route.length) {
+              v.route = getRandomRoute(graph);
+              v.routePos = 0;
+            }
+            v.currentEdge = v.route[v.routePos];
+          }
           v.progress = 0;
+          // -------- end route following -------
         }
 
         const seg = Math.min(
@@ -827,6 +991,27 @@ const Map = forwardRef(
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
+    };
+
+    // Add a helper function to find a random unblocked edge
+    const findRandomUnblockedEdge = () => {
+      const graph = networkGraphRef.current;
+      if (!graph || !graph.edges) return 0;
+
+      let attempts = 0;
+      const maxAttempts = 50;
+      let edgeIdx;
+
+      do {
+        edgeIdx = Math.floor(Math.random() * graph.edges.length);
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.warn("Could not find unblocked edge after max attempts");
+          return edgeIdx; // Return any edge as fallback
+        }
+      } while (graph.edges[edgeIdx].isBlocked);
+
+      return edgeIdx;
     };
 
     return (
