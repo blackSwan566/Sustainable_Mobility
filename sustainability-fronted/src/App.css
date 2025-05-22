@@ -4,9 +4,11 @@
   width: 100vw;
   display: flex;
   flex-direction: column;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   background-color: #f4f6fa;
   margin: 0;
+  position: relative;
+  overflow: hidden;
 }
 .app-scroll-container {
   height: 100vh;
@@ -17,31 +19,28 @@
   background-color: #ffffff;
 }
 
-
 .map-title {
   position: absolute;
-  top: 60px;        /* vorher 20px – nach unten verschieben */
-  left: 60px;       /* vorher 40px – weiter nach rechts */
+  top: 60px; /* vorher 20px – nach unten verschieben */
+  left: 60px; /* vorher 40px – weiter nach rechts */
   z-index: 1001;
   color: white;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
-
 .map-title h1 {
   font-size: 2.8rem;
   font-weight: 700;
   margin: 0;
-  color:#0c7a06
+  color: #0c7a06;
 }
 
 .map-title p {
   font-size: 1.2rem;
   font-style: italic;
   margin-top: 4px;
-  color:#0c7a06
+  color: #0c7a06;
 }
-
 
 .team-name {
   font-size: 1rem;
@@ -56,7 +55,7 @@
 /* Overlay auf der Karte */
 .map-overlay {
   position: absolute;
-  top: 190px;      /* weiter nach unten */
+  top: 190px; /* weiter nach unten */
   right: 15px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
@@ -70,7 +69,7 @@
 .map-overlay-emissions {
   position: absolute;
   top: 190px;
-  right:1100px;
+  right: 1100px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -90,26 +89,23 @@
 
 .map-section {
   height: calc(85vh - 0px);
-  width: 95vw;  /* Breiter als vorher */
+  width: 95vw; /* Breiter als vorher */
   margin-left: auto;
   margin-right: auto;
   position: relative;
   scroll-snap-align: start;
   background-color: #ffffff;
-  padding-bottom: 20px; 
+  padding-bottom: 20px;
   padding-top: 50px;
   padding-right: -170px;
   display: flex;
-  align-items: center;      /* vertikal */
+  align-items: center; /* vertikal */
   justify-content: center;
-
 }
-
 
 #map {
   max-height: 750px;
   height: 100%;
-
 
   margin: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -117,13 +113,11 @@
   border-radius: 8px;
 }
 
-
-
 .headline {
   font-size: 3.5rem;
   color: #19b629;
   margin-bottom: 40px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   /* Modern, klar lesbar */
   font-weight: 700;
   color: #19520c;
@@ -134,13 +128,12 @@
   -webkit-text-fill-color: transparent;
 }
 
-.headline2  { 
+.headline2 {
   color: #19520c;
-  font-size: 1.0rem;
-   font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-family: "Poppins", sans-serif;
   /* Modern, klar lesbar */
   font-weight: 700;
-  
 }
 /* Tabs */
 .tab-group {
@@ -178,7 +171,6 @@
   text-align: center;
   scroll-snap-align: start;
   height: 100vh;
-
 }
 
 .about-section h2 {
@@ -189,7 +181,6 @@
   background: linear-gradient(90deg, #199f19, #0c7a06);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  
 }
 
 .about-section p {
@@ -205,7 +196,6 @@
   white-space: pre-line;
 }
 
-
 .logo-row {
   display: flex;
   justify-content: center;
@@ -216,8 +206,7 @@
 .about-logo {
   height: 60px;
   object-fit: contain;
-  filter: drop
-
+  filter: drop;
 }
 .impact-box {
   display: flex;
@@ -289,7 +278,7 @@
   border-radius: 16px; /* Wie map-overlay */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18); /* Wie map-overlay */
   z-index: 1000;
-  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  font-family: "Poppins", "Segoe UI", sans-serif;
   font-size: 1rem;
 }
 
@@ -333,7 +322,6 @@
   outline: none;
 }
 
-
 .controls-row {
   display: flex;
   align-items: center;
@@ -354,19 +342,19 @@
 }
 
 .controls-row .slider-bar {
-  margin-left: 10px;           /* Abstand zwischen Label und Slider */
+  margin-left: 10px; /* Abstand zwischen Label und Slider */
   margin-right: 0;
   flex-shrink: 0;
-  width: 260px;                /* Feld insgesamt breiter */
+  width: 260px; /* Feld insgesamt breiter */
   display: flex;
-  flex-direction: row;         /* Wert rechts neben den Slider */
+  flex-direction: row; /* Wert rechts neben den Slider */
   align-items: center;
   position: relative;
-  gap: 10px;                   /* Abstand zwischen Slider und Wert */
+  gap: 10px; /* Abstand zwischen Slider und Wert */
 }
 
 .controls-row .control-value {
-  margin-top: 0;               /* Kein Abstand nach oben, da jetzt rechts */
+  margin-top: 0; /* Kein Abstand nach oben, da jetzt rechts */
   margin-left: 8px;
   color: #2d6a4f;
   font-size: 2rem;
@@ -376,5 +364,442 @@
   width: auto;
 }
 
+/* Map styles */
+.leaflet-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
 
+/* Control panel - Apple style */
+.control-panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 320px;
+  max-height: calc(100vh - 40px);
+  z-index: 2000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-right: 5px; /* Add some padding for the scrollbar */
+}
 
+.control-panel-content {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+.control-section {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 18px;
+}
+
+.control-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.control-section h2 {
+  margin: 0 0 5px 0;
+  font-weight: 600;
+  font-size: 20px;
+  color: #000;
+}
+
+.control-section h3 {
+  margin: 0 0 12px 0;
+  font-weight: 600;
+  font-size: 17px;
+  color: #000;
+}
+
+.subtitle {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* Sliders */
+.slider-control {
+  margin-bottom: 16px;
+}
+
+.slider-control:last-child {
+  margin-bottom: 0;
+}
+
+.slider-control label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.slider-bar {
+  display: flex;
+  align-items: center;
+}
+
+.slider-bar input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  outline: none;
+  margin-right: 12px;
+}
+
+.slider-bar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.control-value {
+  font-size: 14px;
+  min-width: 30px;
+  text-align: right;
+  font-weight: 500;
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-button {
+  border: none;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+}
+
+.control-button:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.control-button:active {
+  transform: scale(0.98);
+}
+
+.control-button.active {
+  background-color: rgba(0, 122, 255, 0.15);
+  color: #007aff;
+}
+
+/* Impact analysis */
+.impact-box {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.impact-box:last-child {
+  margin-bottom: 0;
+}
+
+.impact-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.impact-label {
+  width: 100%;
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.impact-value {
+  width: 50px;
+  margin: 0 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.progress-bar {
+  flex: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.progress-fill.co2 {
+  background-color: #34c759;
+}
+
+.progress-fill.noise {
+  background-color: #5ac8fa;
+}
+
+.progress-fill.traffic {
+  background-color: #ff9500;
+}
+
+/* About section */
+.about-info {
+  margin-top: 10px;
+}
+
+.about-text {
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 12px 0;
+  opacity: 0.8;
+}
+
+.logo-container {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mini-logo {
+  height: 20px;
+  width: auto;
+  opacity: 0.8;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* Playback controls */
+.playback-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.control-button-play {
+  flex: 2;
+  justify-content: center;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  font-weight: 600;
+}
+
+.control-button-play:hover {
+  background-color: rgba(0, 122, 255, 0.2);
+}
+
+.control-button-play.active {
+  background-color: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.control-button-speed {
+  flex: 1;
+  justify-content: center;
+  font-weight: 600;
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.control-button-speed:hover {
+  background-color: rgba(52, 199, 89, 0.2);
+}
+
+/* Street Info Panel */
+.street-info-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 280px;
+  z-index: 2000;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+.street-info-panel h3 {
+  margin: 0 0 12px 0;
+  font-weight: 600;
+  font-size: 18px;
+  color: #000;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 8px;
+}
+
+.street-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.street-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #000;
+  font-weight: 600;
+}
+
+/* Speed limit sign */
+.speed-sign {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: white;
+  border: 3px solid #ff0000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.speed-sign-inner {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+}
+
+/* Street tooltip */
+.street-tooltip {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.street-tooltip h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+}
+
+.street-tooltip p {
+  margin: 0;
+  font-size: 12px;
+  color: #555;
+}
+
+/* Control panel - make more scrollable */
+.control-panel-content {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+/* Barrier mode cursor */
+.barrier-mode {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>')
+      12 12,
+    pointer !important;
+}
+
+/* Done button for barrier mode */
+.control-button-done {
+  background-color: rgba(52, 199, 89, 0.2) !important;
+  color: #34c759 !important;
+  font-weight: 600 !important;
+  justify-content: center;
+}
+
+.control-button-done:hover {
+  background-color: rgba(52, 199, 89, 0.3) !important;
+}
+
+/* Mode indicator */
+.mode-indicator {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.mode-indicator-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.mode-indicator-text {
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.mode-indicator-help {
+  font-size: 12px;
+  opacity: 0.8;
+}
