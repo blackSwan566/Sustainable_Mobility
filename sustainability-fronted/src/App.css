@@ -556,6 +556,7 @@ div[ref="mapRef"] {
   text-align: left;
   display: flex;
   align-items: center;
+  color:#000;
 }
 
 .control-button:hover {
