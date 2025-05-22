@@ -85,10 +85,27 @@ const Map = forwardRef(
       // Set the selected street info for display
       if (setSelectedStreetInfo) {
         setSelectedStreetInfo({
-          name: feature.properties.name || "Unnamed Street",
+          name:
+            feature.properties.road_name ||
+            feature.properties.name ||
+            "Unnamed Street",
           type: feature.properties.edge_type || "Unknown",
-          maxSpeed: feature.properties.max_speed,
+          maxSpeed:
+            feature.properties.maxSpeed ||
+            feature.properties.speed_kmh ||
+            (feature.properties.speed
+              ? Math.round(feature.properties.speed * 3.6)
+              : undefined),
           length: calculatePathLength(feature.geometry.coordinates).toFixed(0),
+          allowed: feature.properties.allowed
+            ? feature.properties.allowed.split(",")
+            : [],
+          disallowed: feature.properties.disallowed
+            ? feature.properties.disallowed.split(",")
+            : [],
+          laneWidth: feature.properties.lane_width,
+          priority: feature.properties.priority,
+          isBarriered: barrier.current.some((b) => b.streetId === feature.id),
         });
       }
     };
