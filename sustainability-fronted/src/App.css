@@ -56,8 +56,8 @@
 /* Overlay auf der Karte */
 .map-overlay {
   position: absolute;
-  top: 180px;      /* weiter nach unten */
-  right: 1080px;
+  top: 190px;      /* weiter nach unten */
+  right: 15px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -69,8 +69,8 @@
 
 .map-overlay-emissions {
   position: absolute;
-  top: 180px;
-  right: 20px;
+  top: 190px;
+  right:1100px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.9);
   padding: 20px;
@@ -89,24 +89,27 @@
 }
 
 .map-section {
-  height: calc(90vh - 0px);
-  width: calc(100vw - 30px);
+  height: calc(85vh - 0px);
+  width: 95vw;  /* Breiter als vorher */
+  margin-left: auto;
+  margin-right: auto;
   position: relative;
   scroll-snap-align: start;
   background-color: #ffffff;
   padding-bottom: 20px; 
-   margin: 0 auto;
   padding-top: 50px;
+  padding-right: -170px;
   display: flex;
   align-items: center;      /* vertikal */
   justify-content: center;
+
 }
 
 
 #map {
   max-height: 750px;
   height: 100%;
-  width: 100%;
+
 
   margin: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -274,3 +277,104 @@
   color: #2d6a4f;
   font-weight: bold;
 }
+
+/* ...existing code... */
+.controls.top-right {
+  position: absolute;
+  top: 605px;
+  right: 15px;
+  color: #19520c; /* Dunkleres Grün wie im Layout */
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px 10px;
+  border-radius: 16px; /* Wie map-overlay */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18); /* Wie map-overlay */
+  z-index: 1000;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  font-size: 1rem;
+}
+
+.controls.top-right label {
+  display: block;
+  margin-bottom: 10px;
+  padding-left: 0;
+  color: #19520c;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.controls.top-right span {
+  margin-left: 0;
+  color: #2d6a4f;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+/* Optional: Buttons oder Inputs in controls anpassen */
+.controls.top-right input,
+.controls.top-right select,
+.controls.top-right button {
+  border-radius: 8px;
+  border: 1px solid #dcefdc;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  background: #f0f5f0;
+  color: #19520c;
+  transition: border 0.2s;
+}
+
+.controls.top-right input:focus,
+.controls.top-right select:focus,
+.controls.top-right button:focus {
+  border: 1.5px solid #31b671;
+  outline: none;
+}
+
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0px;
+  position: relative;
+}
+
+/* Label fett und vertikal mittig */
+.controls-row label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #19520c;
+  margin: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.controls-row .slider-bar {
+  margin-left: 10px;           /* Abstand zwischen Label und Slider */
+  margin-right: 0;
+  flex-shrink: 0;
+  width: 260px;                /* Feld insgesamt breiter */
+  display: flex;
+  flex-direction: row;         /* Wert rechts neben den Slider */
+  align-items: center;
+  position: relative;
+  gap: 10px;                   /* Abstand zwischen Slider und Wert */
+}
+
+.controls-row .control-value {
+  margin-top: 0;               /* Kein Abstand nach oben, da jetzt rechts */
+  margin-left: 8px;
+  color: #2d6a4f;
+  font-size: 2rem;
+  font-weight: 600;
+  text-align: right;
+  min-width: 40px;
+  width: auto;
+}
+
+
+

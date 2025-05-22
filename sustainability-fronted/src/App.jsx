@@ -382,37 +382,53 @@ useEffect(() => {
           </div>
         </div>
 
-        <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
-        
+        <div className="controls top-right">
+  <div className="controls-row">
+    <label htmlFor="vehicle-slider">Vehicles:</label>
+    <div className="slider-bar">
+      <input
+        id="vehicle-slider"
+        type="range"
+        min="10"
+        max="500"
+        value={vehicleCount}
+        step="10"
+        onChange={(e) => {
+          const val = parseInt(e.target.value);
+          setVehicleCount(val);
+          vehicleCountRef.current = val;
+          initVehicles(mapRef.current._leaflet_map, val);
+        }}
+      />
+      <span className="control-value">{vehicleCount}</span>
+    </div>
+  </div>
+  <div className="controls-row">
+    <label htmlFor="speed-slider">Speed:</label>
+    <div className="slider-bar">
+      <input
+        id="speed-slider"
+        type="range"
+        min="0.5"
+        max="5"
+        step="0.5"
+        value={speedFactor}
+        onChange={(e) => {
+          const val = parseFloat(e.target.value);
+          setSpeedFactor(val);
+          speedFactorRef.current = val;
+        }}
+      />
+      <span className="control-value">{speedFactor}x</span>
+    </div>
+  </div>
+</div>
 
-        <div className="controls">
-          <label>
-            Vehicles:
-            <input
-              type="range" min="10" max="500" value={vehicleCount} step="10"
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                setVehicleCount(val);
-                vehicleCountRef.current = val;
-                initVehicles(mapRef.current._leaflet_map, val);
-              }}
-            />
-          </label>
-          <span> {vehicleCount}</span>
-          <br />
-          <label>
-            Speed:
-            <input
-              type="range" min="0.5" max="5" step="0.5" value={speedFactor}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                setSpeedFactor(val);
-                speedFactorRef.current = val;
-              }}
-            />
-          </label>
-          <span> {speedFactor}x</span>
-        </div>
+
+
+
+<div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+
       </div>
 
       <div className="about-section">
