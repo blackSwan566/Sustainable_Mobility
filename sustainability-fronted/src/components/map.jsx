@@ -385,14 +385,52 @@ const Map = forwardRef(
         })
         .addTo(map);
 
+      // Use a more subtle map tile style
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
         {
           subdomains: "abcd",
           maxZoom: 19,
           attribution: "&copy; OSM & CARTO",
         }
       ).addTo(map);
+
+      // Add map labels as a separate layer for better readability
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 19,
+          pane: "shadowPane", // Place labels above other layers
+        }
+      ).addTo(map);
+
+      // Handler for layer control changes
+      const handleLayerToggle = (e) => {
+        const layerName = e.name;
+        const isChecked = e.type === "overlayadd";
+
+        console.log(`Layer ${layerName} ${isChecked ? "added" : "removed"}`);
+
+        // Special handling for the vehicles layer
+        if (layerName === "Vehicles") {
+          if (isChecked && vehicleMarkersRef.current.length === 0) {
+            console.log("Reinitializing vehicles");
+            // Get the layer from map's layers
+            const vehiclesLayer = Object.values(map._layers).find(
+              (layer) => layer.vehicleCount !== undefined
+            );
+
+            if (vehiclesLayer) {
+              initVehicles(map, vehiclesLayer.vehicleCount, vehiclesLayer);
+            }
+          }
+        }
+      };
+
+      // Listen for layer control events
+      map.on("overlayadd", handleLayerToggle);
+      map.on("overlayremove", handleLayerToggle);
 
       fetch("/network_full.geojson")
         .then((res) => res.json())
@@ -401,21 +439,25 @@ const Map = forwardRef(
 
           // Group streets by name
           const streetsByName = processStreetData(data);
-          console.log("Street groups:", Object.keys(streetsByName));
+          console.log("Street groups:", Object.keys(streetsByName).length);
 
+          // Update the edge type colors to use shades of gray
           const edgeTypeColors = {
-            "highway.primary": "#ff4444",
-            "highway.secondary": "#44ff44",
-            "highway.tertiary": "#4444ff",
-            "highway.residential": "#ffaa44",
-            "highway.service": "#44ffff",
+            "highway.primary": "#555555",
+            "highway.secondary": "#666666",
+            "highway.tertiary": "#777777",
+            "highway.residential": "#888888",
+            "highway.service": "#999999",
             default: "#aaaaaa",
           };
 
           const getColor = (f) =>
             edgeTypeColors[f.properties.edge_type] || edgeTypeColors.default;
 
-          // Create separate layers for each street name
+          // Create a single layer group for all streets for better performance
+          const streetsLayer = L.layerGroup().addTo(map);
+
+          // Create separate layers for each street name but add them to the streets layer group
           streetLayersRef.current = {};
 
           Object.entries(streetsByName).forEach(([name, features]) => {
@@ -429,13 +471,13 @@ const Map = forwardRef(
                 style: (f) => ({
                   color: getColor(f),
                   weight: 4,
-                  opacity: 0.7,
+                  opacity: 0.6,
                 }),
               });
 
               // Attach feature to layer for reference
               layer.feature = feature;
-              layer.addTo(map);
+              layer.addTo(streetsLayer);
               return layer;
             });
           });
@@ -446,21 +488,27 @@ const Map = forwardRef(
           console.log(`Created ${totalLayers} street layers in total`);
 
           const allGeoJSON = L.geoJSON(data, {
-            style: (f) => ({ color: getColor(f), weight: 4, opacity: 0.7 }),
+            style: (f) => ({ color: getColor(f), weight: 4, opacity: 0.6 }),
           });
 
           map.fitBounds(allGeoJSON.getBounds(), { padding: [50, 50] });
 
           buildNetworkGraph(data);
           createPathVisualizationLayer(map);
-          initVehicles(map, vehicleCount);
+
+          // Create a layer group for vehicles
+          const vehiclesLayer = L.layerGroup().addTo(map);
+          vehiclesLayer.vehicleCount = vehicleCount; // Store count for reinit
+
+          // Initialize vehicles with the vehicle layer
+          initVehicles(map, vehicleCount, vehiclesLayer);
 
           heatLayersRef.current = {
             jam: L.heatLayer([], {
               radius: 20,
               maxZoom: 19,
               gradient: { 0.4: "#00f", 0.7: "#ff0", 1: "#f00" },
-            }).addTo(map),
+            }),
             co2: L.heatLayer([], {
               radius: 20,
               maxZoom: 19,
@@ -473,11 +521,13 @@ const Map = forwardRef(
             }),
           };
 
-          // Move layer controls to bottom right
+          // Move layer controls to bottom right with proper overlays
           L.control
             .layers(
               null,
               {
+                Streets: streetsLayer,
+                Vehicles: vehiclesLayer,
                 "Traffic jam": heatLayersRef.current.jam,
                 "CO₂": heatLayersRef.current.co2,
                 "Noise [dB]": heatLayersRef.current.noise,
@@ -491,6 +541,8 @@ const Map = forwardRef(
         if (animationRef.current) {
           stopAnimation();
         }
+        map.off("overlayadd", handleLayerToggle);
+        map.off("overlayremove", handleLayerToggle);
       };
     }, [vehicleCount]);
 
@@ -554,10 +606,13 @@ const Map = forwardRef(
           graph.edges[idx].feature.geometry.coordinates.map((c) => [c[1], c[0]])
         );
 
+        // Use grayscale colors with different opacity
+        const opacity = 0.4 + i * 0.1;
         L.polyline(coords, {
-          color: `hsl(${Math.floor(Math.random() * 360)}, 80%, 50%)`,
+          color: `rgba(100, 100, 100, ${opacity})`,
           weight: 6,
-          opacity: 0.7,
+          opacity: opacity,
+          dashArray: "5, 10", // Add dashed lines for path visualization
         }).addTo(layer);
       }
 
@@ -587,10 +642,11 @@ const Map = forwardRef(
       return path;
     };
 
-    const initVehicles = (map, count) => {
+    const initVehicles = (map, count, layerGroup = null) => {
       const graph = networkGraphRef.current;
       if (!graph || !graph.edges || !graph.edges.length) return;
 
+      // Clear existing vehicles
       vehicleMarkersRef.current.forEach((v) => {
         if (v.marker) map.removeLayer(v.marker);
         if (v.trail) map.removeLayer(v.trail);
@@ -598,6 +654,9 @@ const Map = forwardRef(
 
       vehicleMarkersRef.current = [];
       vehiclesRef.current = [];
+
+      // Use a consistent color for all vehicles
+      const vehicleColor = "#3388ff"; // Standard blue color
 
       for (let i = 0; i < count; i++) {
         const edgeIdx = Math.floor(Math.random() * graph.edges.length);
@@ -627,8 +686,6 @@ const Map = forwardRef(
         const lng = start[0] + (end[0] - start[0]) * sub;
         const lat = start[1] + (end[1] - start[1]) * sub;
 
-        const color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
-
         const vehicle = {
           id: i,
           lng,
@@ -636,18 +693,25 @@ const Map = forwardRef(
           currentEdge: edgeIdx,
           progress,
           speed: 10 + Math.random() * 10,
-          color,
+          color: vehicleColor,
           trail: [],
         };
 
         const marker = L.circleMarker([lat, lng], {
           radius: 4,
-          fillColor: color,
-          color: color,
+          fillColor: vehicleColor,
+          color: vehicleColor,
           weight: 1,
           opacity: 1,
           fillOpacity: 0.8,
-        }).addTo(map);
+        });
+
+        // Add to layer group if provided, otherwise add directly to map
+        if (layerGroup) {
+          marker.addTo(layerGroup);
+        } else {
+          marker.addTo(map);
+        }
 
         vehicleMarkersRef.current.push({ marker, trail: null });
         vehiclesRef.current.push(vehicle);
@@ -657,6 +721,9 @@ const Map = forwardRef(
     const updateVehicles = (delta) => {
       const graph = networkGraphRef.current;
       if (!graph || !graph.edges || !vehiclesRef.current) return;
+
+      // Use a consistent color for all vehicles
+      const vehicleColor = "#3388ff"; // Standard blue color
 
       vehiclesRef.current.forEach((v, idx) => {
         if (!v || !graph.edges[v.currentEdge]) {
@@ -674,7 +741,7 @@ const Map = forwardRef(
             currentEdge: newEdgeIdx,
             progress: 0,
             speed: 10 + Math.random() * 10,
-            color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
+            color: vehicleColor,
             trail: [],
           };
           vehiclesRef.current[idx] = v;
