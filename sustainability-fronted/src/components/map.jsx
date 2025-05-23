@@ -356,6 +356,11 @@ const Map = forwardRef(
               marker,
               trail: null,
             });
+            console.log(
+              `Barrier placed at coordinates: ${e.latlng.lat.toFixed(
+                5
+              )}, ${e.latlng.lng.toFixed(5)}`
+            );
           }
         }
       };
@@ -366,6 +371,7 @@ const Map = forwardRef(
           !streetLayersRef.current ||
           Object.keys(streetLayersRef.current).length === 0
         ) {
+          console.log("No street layers available for hovering");
           return;
         }
 
@@ -418,6 +424,14 @@ const Map = forwardRef(
               }
             }
           });
+
+        if (detectedStreets > 0) {
+          console.log(
+            `Found ${detectedStreets} street segments within hover range. Closest: ${
+              closestFeature?.properties?.name || "unnamed"
+            } (${closestDistance.toFixed(2)}m)`
+          );
+        }
 
         if (closestFeature !== hoveredFeature) {
           setHoveredFeature(closestFeature);
@@ -500,6 +514,8 @@ const Map = forwardRef(
       const handleLayerToggle = (e) => {
         const layerName = e.name;
         const isChecked = e.type === "overlayadd";
+
+        console.log(`Layer ${layerName} ${isChecked ? "added" : "removed"}`);
 
         // Special handling for the vehicles layer
         if (layerName === "Vehicles") {
