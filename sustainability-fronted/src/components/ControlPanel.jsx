@@ -60,7 +60,7 @@ const ControlPanel = ({
                 id="vehicle-slider"
                 type="range"
                 min="10"
-                max="500"
+                max="1000"
                 value={vehicleCount}
                 step="10"
                 onChange={(e) => {

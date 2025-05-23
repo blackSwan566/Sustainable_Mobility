@@ -1,8 +1,8 @@
 .street-info-panel {
-  background: rgba(255, 255, 255, 0.95);
+  background-color: rgba(255, 255, 255, 0.5);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
   max-width: 300px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -51,7 +51,7 @@
   justify-content: center;
 }
 
-.speed-sign-circle {
+/* .speed-sign-circle {
   width: 50px;
   height: 50px;
   background: #fff;
@@ -62,7 +62,7 @@
   justify-content: center;
   position: relative;
   animation: pulse 2s infinite;
-}
+} */
 
 .speed-value {
   color: #000;
@@ -70,13 +70,13 @@
   font-size: 18px;
 }
 
-.speed-value::after {
+/* .speed-value::after {
   content: " km/h";
   font-size: 10px;
   position: absolute;
   bottom: 8px;
   right: 8px;
-}
+} */
 
 /* Vehicle Icons Styling */
 .vehicle-types {

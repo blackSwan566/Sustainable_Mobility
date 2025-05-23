@@ -61,18 +61,18 @@ const StreetInfoPanel = ({ streetInfo }) => {
 
       <div className="street-info-content">
         <div className="street-info-row">
-          <span className="info-label">Straßentyp:</span>
+          <span className="info-label">Street Type:</span>
           <span className="info-value">{getStreetTypeName(type)}</span>
         </div>
 
         <div className="street-info-row">
-          <span className="info-label">Länge:</span>
+          <span className="info-label">Length:</span>
           <span className="info-value">{length}m</span>
         </div>
 
         {speedKmh && (
           <div className="street-info-row speed-limit-container">
-            <span className="info-label">Tempolimit:</span>
+            <span className="info-label">Speed Limit:</span>
             <div className="speed-sign">
               <div className="speed-sign-circle">
                 <span className="speed-value">{speedKmh}</span>
@@ -83,14 +83,14 @@ const StreetInfoPanel = ({ streetInfo }) => {
 
         {laneWidth && (
           <div className="street-info-row">
-            <span className="info-label">Fahrbahnbreite:</span>
+            <span className="info-label">Lane Width:</span>
             <span className="info-value">{laneWidth}m</span>
           </div>
         )}
 
         {priority !== undefined && (
           <div className="street-info-row">
-            <span className="info-label">Priorität:</span>
+            <span className="info-label">Priority:</span>
             <span className="info-value priority-value">
               {"⭐".repeat(Math.min(5, Math.max(1, Math.round(priority / 2))))}
             </span>
@@ -99,7 +99,7 @@ const StreetInfoPanel = ({ streetInfo }) => {
 
         {relevantVehicles && relevantVehicles.length > 0 && (
           <div className="street-info-row vehicle-types">
-            <span className="info-label">Erlaubte Fahrzeuge:</span>
+            <span className="info-label">Allowed Vehicles:</span>
             <div className="vehicle-icons">
               {relevantVehicles.map((vehicle, index) => (
                 <span key={index} className="vehicle-icon" title={vehicle}>
@@ -119,7 +119,7 @@ const StreetInfoPanel = ({ streetInfo }) => {
                 backgroundColor: isBarriered ? "#ff4444" : "#4CAF50",
               }}
             ></span>
-            {isBarriered ? "Gesperrt" : "Offen für Verkehr"}
+            {isBarriered ? "Blocked" : "Open for Traffic"}
           </span>
         </div>
       </div>
